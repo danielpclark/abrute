@@ -1,0 +1,36 @@
+
+
+
+Can divy up tasks via modulo 10 for 10 threads.  Each run is 10 through 19 for each path.
+Amount of threads pass in check for (total - 1) and start with zero.
+
+```ruby
+# for 10
+0 % 10 - 0
+# => 0
+
+# for 11
+1 % 10 - 1
+# => 0
+
+# for 12
+2 % 10 - 2
+# => 0
+
+# for 13
+3 % 10 - 3
+# => 0
+```
+
+All characters will be mapped by their ordinal value for quantity max checks to permit
+`next` to be called in a looping scenario.  Perhaps should use a custom numeric base.
+In base digit rollovers if the next character is to be skipped (liek a tens place) skip
+that many of the roll over positions amount (hundreds, thousands, etc).
+
+
+Mapping should not be confused with base roll over position.
+
+------------
+
+When the same file, content, and password is used the only difference in the binary is the ending.
+

@@ -1,0 +1,19 @@
+[package]
+name = "abrute"
+version = "0.0.1"
+authors = ["Daniel P. Clark <6ftdan@gmail.com>"]
+description = "AESCrypt Brute force attempter."
+documentation = "http://danielpclark.github.io/abrute/index.html"
+homepage = "https://github.com/danielpclark/abrute"
+repository = "https://github.com/danielpclark/abrute"
+license = "MIT OR Apache-2.0"
+readme = "README.md"
+keywords = ["crypto","text","cryptography","security"]
+categories = ["cryptography"]
+
+[dependencies]
+digits = "^0.2"
+num_cpus = "^1.6"
+clap = {version = "~2.19.0", features = ["yaml"]}
+rayon = "0.8.2"
+#arrayfire = "3.5.0"

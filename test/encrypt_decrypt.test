@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+# Note: This is not directly executable.
+#       This is for VIM syntax highlighting.
+
+describe "abrute decrypts"
+  it "1) prep encrypted file"
+    echo "world" >> hello.txt
+    bin/aescrypt -e -p 123456 hello.txt
+    assert file_present hello.txt.aes
+  end
+
+  it "2) remove original"
+    rm hello.txt
+    assert file_absent hello.txt
+  end
+
+  it "3) decrypts file"
+    # target/debug/abrute hello.txt.aes
+    bin/aescrypt -d -p 123456 hello.txt.aes
+    assert file_present hello.txt
+  end
+
+  it "4) remove encrypted"
+    rm hello.txt.aes
+    assert file_absent hello.txt.aes
+  end
+
+  it "5) cleans up"
+    rm hello.txt
+    assert file_absent hello.txt
+  end
+end
