@@ -1,0 +1,23 @@
+name: abrute
+version: "alpha"
+author: Daniel P. Clark <6ftdan@gmail.com>
+about: Brute force AES file decryptor.
+args:
+  - RANGE:
+    help: "Length for password as digit 4 or range 4:6"
+    required: true
+    index: 1
+  - CHARACTERS:
+    help: A list of characters to be used in decryption
+    required: true
+    index: 2
+  - target:
+    short: t
+    long: target
+    value_name: FILE
+    help: Target file to decrypt
+    takes_value: true
+  - verbose:
+    short: v
+    multiple: true
+    help: Sets the level of verbosity
