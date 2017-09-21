@@ -12,8 +12,7 @@ keywords = ["crypto","text","cryptography","security"]
 categories = ["cryptography"]
 
 [dependencies]
-digits = "^0.2"
+digits = "^0.3"
 num_cpus = "^1.6"
-clap = {version = "~2.19.0", features = ["yaml"]}
 rayon = "0.8.2"
-#arrayfire = "3.5.0"
+array_tool = "0.4.1"
