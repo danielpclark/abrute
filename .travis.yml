@@ -1,7 +1,6 @@
 language: rust
 os:
 - linux
-- osx
 rust:
 - stable
 - beta
@@ -12,4 +11,6 @@ before_install:
 - cd aescrypt-3.13/src
 - make && sudo make install
 - cd .. && rm -rf aescrypt-3.13
-script: cargo test && cargo build && bin/shpec test/*.test
+- pwd
+- export PATH=$PATH:$PWD/abrute/bin/
+script: cargo test && cargo build && shpec test/*.test
