@@ -15,6 +15,7 @@ describe "* abrute decrypts"
 
   it "3) decrypts file"
     target/debug/abrute 4 1234 test/data/example.file.aes 1>/dev/null
+    assert equal $? 0
     assert file_present test/data/example.file
   end
 
