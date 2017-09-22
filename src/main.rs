@@ -1,11 +1,11 @@
 #[allow(unused_imports)]
 extern crate digits;
-extern crate array_tool;
 extern crate rayon;
 // extern crate array_fire;
 extern crate num_cpus;
+use std::process::Command;
 use digits::{BaseCustom, Digits};
-use array_tool::vec::{Times,Join};
+use std::path::Path;
 use std::env;
 use std::ffi::OsString;
 use std::io::{self, Write}; 
@@ -32,10 +32,6 @@ fn derive_character_base(characters: OsString) -> BaseCustom<char> {
   BaseCustom::<char>::new(chrs.chars().collect())
 }
 
-fn fill_with_zero<'a>(d: Digits<'a>, c: i32) -> Digits<'a> {
-  d.propagate(vec![d.zero().to_s()].times(c).join(""))
-}
-
 fn run_app() -> Result<(), &'static str> {
   let cpus = num_cpus::get();
   let mut args = env::args_os();
@@ -48,10 +44,33 @@ fn run_app() -> Result<(), &'static str> {
   let (min, max) = derive_min_max(args.next().unwrap());
   let mapping = derive_character_base(args.next().unwrap());
   let mut sequencer = Digits::new(&mapping, "".to_string());
-  sequencer = fill_with_zero(sequencer, min);
+  sequencer.zero_fill(min as usize);
   let target = args.next_back().unwrap();
 
-  println!("min: {:?}\nmax: {:?}\ncharacters: {:?}\ntarget: {:?}", min, max, sequencer.to_s(), target);
+  if !Path::new(&target).exists() {
+    writeln!(io::stderr(), "Error: File {:?} does not exist.", target);
+  }
+
+  loop {
+    if sequencer.length() > max as usize {
+      writeln!(io::stderr(), "Password not found for given length and character set.");
+      return Err("EOL");
+    }
+
+    let output = Command::new("aescrypt").
+      arg("-d").
+      arg("-p").
+      arg(sequencer.to_s()).
+      arg(&target).
+      output().
+      expect("Failed to execute decryption command!");
+
+    if output.status.success() {
+      println!("Success!\nPassword is: {}", sequencer.to_s());
+      break;
+    }
+    sequencer.succ();
+  }
 
   Ok(())
 }

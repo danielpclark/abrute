@@ -12,7 +12,6 @@ keywords = ["crypto","text","cryptography","security"]
 categories = ["cryptography"]
 
 [dependencies]
-digits = "^0.3"
+digits = "^0.3.1"
 num_cpus = "^1.6"
 rayon = "0.8.2"
-array_tool = "0.4.1"
