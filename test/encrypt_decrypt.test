@@ -1,10 +1,6 @@
 #!/usr/bin/env bash
 # Note: This is not directly executable.
 #       This is for VIM syntax highlighting.
-if [ $TRAVIS_BUILD_DIR ]
-then
-  cd $TRAVIS_BUILD_DIR
-fi
 
 describe "abrute decrypts"
   it "1) prep encrypted file"
@@ -18,7 +14,7 @@ describe "abrute decrypts"
   end
 
   it "3) decrypts file"
-    abrute 4 1234 test/data/example.file.aes 1>/dev/null
+    target/debug/abrute 4 1234 test/data/example.file.aes 1>/dev/null
     assert file_present test/data/example.file
   end
 

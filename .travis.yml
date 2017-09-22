@@ -6,4 +6,4 @@ rust:
 - stable
 - beta
 - nightly
-script: cargo test && tree && bin/shpec test/*.test
+script: cargo test && cargo build && bin/shpec test/*.test
