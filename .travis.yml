@@ -9,7 +9,7 @@ rust:
 before_install:
 - wget https://www.aescrypt.com/download/v3/linux/aescrypt-3.13.tgz
 - tar -xzf aescrypt-3.13.tgz
-- cd aescrypt-3.13/
+- cd aescrypt-3.13/src
 - make && make install
 - cd .. && rm -rf aescrypt-3.13
 script: cargo test && cargo build && bin/shpec test/*.test
