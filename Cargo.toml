@@ -13,5 +13,4 @@ categories = ["cryptography"]
 
 [dependencies]
 digits = "^0.3.1"
-num_cpus = "^1.6"
 rayon = "0.8.2"

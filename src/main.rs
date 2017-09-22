@@ -1,15 +1,12 @@
 #[allow(unused_imports)]
 extern crate digits;
 extern crate rayon;
-// extern crate array_fire;
-extern crate num_cpus;
 use std::process::Command;
 use digits::{BaseCustom, Digits};
 use std::path::Path;
 use std::env;
 use std::ffi::OsString;
 use std::io::{self, Write}; 
-
 use rayon::prelude::*;
 
 fn derive_min_max(range: OsString) -> (i32, i32) {
@@ -32,13 +29,23 @@ fn derive_character_base(characters: OsString) -> BaseCustom<char> {
   BaseCustom::<char>::new(chrs.chars().collect())
 }
 
+fn chunk_sequence(d: &mut Digits, qty: usize) -> Vec<String> {
+  let mut counter = 0;
+  let mut result = vec![];
+  loop {
+    if counter >= qty { break; }
+    result.push(d.succ().to_s());
+    counter += 1;
+  }
+  result
+}
+
 fn run_app() -> Result<(), &'static str> {
-  let cpus = num_cpus::get();
   let mut args = env::args_os();
   args.next();
 
   if args.len() < 3 {
-    return Err(("Invalid arguments provided."));
+    return Err("Invalid arguments provided.");
   }
 
   let (min, max) = derive_min_max(args.next().unwrap());
@@ -48,28 +55,37 @@ fn run_app() -> Result<(), &'static str> {
   let target = args.next_back().unwrap();
 
   if !Path::new(&target).exists() {
-    writeln!(io::stderr(), "Error: File {:?} does not exist.", target);
+    writeln!(io::stderr(), "Error: File {:?} does not exist.", target).err();
   }
 
   loop {
     if sequencer.length() > max as usize {
-      writeln!(io::stderr(), "Password not found for given length and character set.");
+      writeln!(io::stderr(), "Password not found for given length and character set.").err();
       return Err("EOL");
     }
 
-    let output = Command::new("aescrypt").
-      arg("-d").
-      arg("-p").
-      arg(sequencer.to_s()).
-      arg(&target).
-      output().
-      expect("Failed to execute decryption command!");
+    let chunk = chunk_sequence(&mut sequencer, 128);
 
-    if output.status.success() {
-      println!("Success!\nPassword is: {}", sequencer.to_s());
+    let result: i8 = chunk.par_iter().map(|ref value|
+      {
+        let output = Command::new("aescrypt").
+          arg("-d").
+          arg("-p").
+          arg(&value).
+          arg(&target).
+          output().
+          expect("Failed to execute decryption command!");
+
+        if output.status.success() {
+          println!("Success!\nPassword is: {}", value);
+          1
+        } else { 0 }
+      }
+    ).sum();
+
+    if result == 1 {
       break;
     }
-    sequencer.succ();
   }
 
   Ok(())
