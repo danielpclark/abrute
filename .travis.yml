@@ -6,10 +6,6 @@ rust:
 - stable
 - beta
 - nightly
-before_install:
-- wget https://www.aescrypt.com/download/v3/linux/aescrypt-3.13.tgz
-- tar -xzf aescrypt-3.13.tgz
-- cd aescrypt-3.13/src
-- make && make install
-- cd .. && rm -rf aescrypt-3.13
+before_script:
+- export PATH=$PATH:$PWD/abrute/bin/
 script: cargo test && cargo build && bin/shpec test/*.test
