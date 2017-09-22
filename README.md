@@ -1,9 +1,10 @@
 [![Build Status](https://travis-ci.org/danielpclark/abrute.svg?branch=master)](https://travis-ci.org/danielpclark/abrute)
 
-# abrute - AES Brute Force File Decryptor
+# abrute - Multi-threaded AES Brute Force File Decryption
 
-Multithreaded AES file brute force decryptor.  Rather straight forward.
-It works but has much more improvements yet to come.
+Rather straight forward.  It works but has much more improvements yet to come.
+This will use your CPU to the best of its ability so you may want to use this on
+a secondary system.
 
 ## Installation
 
@@ -44,6 +45,8 @@ Usage: abrute RANGE CHARACTERS TARGET
 
  CHARACTERS  Should not have quotes unless the password may have them.
 ```
+
+## License
 
 Licensed under either of
 
