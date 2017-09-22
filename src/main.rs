@@ -40,12 +40,29 @@ fn chunk_sequence(d: &mut Digits, qty: usize) -> Vec<String> {
   result
 }
 
-fn run_app() -> Result<(), &'static str> {
+fn usage() -> String {
+"abrute - AES Brute Force File Decryptor
+----------------------------------------
+Usage: abrute RANGE CHARACTERS TARGET
+
+ RANGE\t\tCan be a single number or min max pair with a colon.
+ \t\teg) abrute 4:6 asdf1234 file.tar.aes
+
+ CHARACTERS\tShould not have quotes unless the password may have them.".to_string()
+}
+
+fn run_app() -> Result<(), String> {
   let mut args = env::args_os();
   args.next();
 
+  if args.len() == 0 {
+    println!("{}", usage());
+    return Ok(());
+  }
+
   if args.len() < 3 {
-    return Err("Invalid arguments provided.");
+    writeln!(io::stderr(), "{}", usage()).err();
+    return Err("Invalid arguments provided.".to_string());
   }
 
   let (min, max) = derive_min_max(args.next().unwrap());
@@ -56,13 +73,17 @@ fn run_app() -> Result<(), &'static str> {
 
   if !Path::new(&target).exists() {
     writeln!(io::stderr(), "Error: File {:?} does not exist.", target).err();
+    return Err("Please verify last argument is the proper filename.".to_string())
   }
 
   loop {
     if sequencer.length() > max as usize {
       writeln!(io::stderr(), "Password not found for given length and character set.").err();
-      return Err("EOL");
+      return Err("EOL".to_string());
     }
+
+    print!("{}..", sequencer.to_s()); // Verbose
+    std::io::stdout().flush().unwrap();
 
     let chunk = chunk_sequence(&mut sequencer, 128);
 
