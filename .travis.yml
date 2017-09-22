@@ -10,7 +10,6 @@ before_install:
 - tar -xzf aescrypt-3.13.tgz
 - cd aescrypt-3.13/src
 - make && sudo make install
-- cd .. && rm -rf aescrypt-3.13
-- pwd
-- export PATH=$PATH:$PWD/abrute/bin/
+- cd ../.. && rm -rf aescrypt-3.13
+- export PATH=$PATH:$PWD/bin/
 script: cargo test && cargo build && shpec test/*.test
