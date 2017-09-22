@@ -2,7 +2,7 @@
 # Note: This is not directly executable.
 #       This is for VIM syntax highlighting.
 
-describe "abrute decrypts"
+describe "* abrute decrypts"
   it "1) prep encrypted file"
     bin/aescrypt -e -p 4321 test/data/example.file
     assert file_present test/data/example.file.aes

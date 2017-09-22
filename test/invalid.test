@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+# Note: This is not directly executable.
+#       This is for VIM syntax highlighting.
+
+describe "* abrute with invalid input"
+  it "too few arguments"
+    target/debug/abrute 1>/dev/null
+    assert unequal "$0" 0
+  end
+
+  it "invalid range"
+    target/debug/abrute a:b asdf test/data/example.file.aes 2>/dev/null
+    assert unequal "$0" 0
+  end
+
+  it "file does not exist"
+    target/debug/abrute 4:4 asdf test/data/example-thingy.file.aes 2>/dev/null
+    assert unequal "$0" 0
+  end
+end
