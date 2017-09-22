@@ -5,6 +5,33 @@
 Multithreaded AES file brute force decryptor.  Rather straight forward.
 It works but has much more improvements yet to come.
 
+## Installation
+
+First you need to have aescrypt installed.
+
+```bash
+wget https://www.aescrypt.com/download/v3/linux/aescrypt-3.13.tgz
+tar -xzf aescrypt-3.13.tgz
+cd aescrypt-3.13/src
+make && sudo make install
+cd ../.. && rm -rf aescrypt-3.13
+```
+
+Next you need to have [Rust installed](https://www.rust-lang.org/en-US/install.html).  
+
+```bash
+curl https://sh.rustup.rs -sSf | sh
+```
+
+Then you can get and compile abrute.
+
+```bash
+git clone https://github.com/danielpclark/abrute.git
+cd abrute
+cargo build --release
+sudo cp target/release/abrute /usr/bin/
+```
+
 ## Usage
 
 ```
