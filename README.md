@@ -45,6 +45,7 @@ USAGE:	abrute <RANGE> <CHARACTERS> [OPTIONS] [--] <TARGET>
   -a, --adjacent  Set a limit for allowed adjacent characters. Zero will not
                   allow any characters of the same kind to neghibor in the
                   attempts.
+  -s, --start     Starting character sequence to begin at.
   <TARGET>        Target file to decrypt.
   -h, --help      Prints help information.
   -v, --version   Prints version information.
