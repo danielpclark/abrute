@@ -24,9 +24,9 @@ fn chunk_sequence(d: &mut Digits, qty: usize, adj: Option<&str>) -> Vec<String> 
   result
 }
 
-pub fn core_loop<'a>(max: i32, mut sequencer: Digits<'a>, target: &str, adj: Option<&str>) -> Result<(),String> {
+pub fn core_loop<'a>(max: usize, mut sequencer: Digits<'a>, target: &str, adj: Option<&str>) -> Result<(),String> {
   loop {
-    if sequencer.length() > max as usize {
+    if sequencer.length() > max {
       writeln!(io::stderr(), "Password not found for given length and character set.").err();
       return Err("EOL".to_string());
     }

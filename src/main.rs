@@ -39,6 +39,11 @@ fn run_app() -> Result<(), String> {
           takes_value(true).
           validator(validate_is_digit)
     ).
+    arg(Arg::with_name("start").
+          short("s").
+          long("start").
+          takes_value(true)
+    ).
     arg(Arg::with_name("TARGET").
           required(true).
           last(true)
@@ -58,6 +63,7 @@ USAGE:\tabrute <RANGE> <CHARACTERS> [OPTIONS] [--] <TARGET>
   -a, --adjacent  Set a limit for allowed adjacent characters. Zero will not
                   allow any characters of the same kind to neghibor in the
                   attempts.
+  -s, --start     Starting character sequence to begin at.
   <TARGET>        Target file to decrypt.
   -h, --help      Prints help information.
   -v, --version   Prints version information.
@@ -68,7 +74,13 @@ USE OF THIS BINARY FALLS UNDER THE MIT LICENSE       (c) 2017").
     
   let (min, max) = derive_min_max(matches.value_of("RANGE").unwrap());
   let mapping = derive_character_base(matches.value_of("CHARACTERS").unwrap());
-  let mut sequencer = Digits::new(&mapping, "".to_string());
+  
+  if let Some(s) = matches.value_of("start") {
+    let result = validate_string_length(s, max);
+    if result.is_err() { return result; }
+  }
+
+  let mut sequencer = Digits::new(&mapping, matches.value_of("start").unwrap_or("").to_string());
   sequencer.zero_fill(min as usize);
   let target = matches.value_of("TARGET").unwrap();
   let adjacent = matches.value_of("adjacent");
