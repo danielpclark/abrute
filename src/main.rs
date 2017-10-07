@@ -5,134 +5,76 @@
 // http://opensource.org/licenses/MIT>, at your option. This file may not be
 // copied, modified, or distributed except according to those terms.
 //
-#[allow(unused_imports)]
 extern crate digits;
 extern crate rayon;
-use std::process::Command;
-use digits::{BaseCustom, Digits};
+use digits::Digits;
 use std::path::Path;
-use std::env;
-use std::ffi::OsString;
 use std::io::{self, Write}; 
-use rayon::prelude::*;
-use std::sync::Mutex;
-
-fn derive_min_max(range: OsString) -> (i32, i32) {
-  let rvals = range.to_str().unwrap().split(':').collect::<Vec<&str>>();
-  let mut rivals = rvals.iter();
-  let min = rivals.next().unwrap();
-  let max = rivals.next();
-  let min = min.parse::<i32>().unwrap();
-  let get_max = || -> i32 {
-    match max {
-      Some(v) => { v.parse::<i32>().unwrap() },
-      _ => { min }
-    }
-  };
-  (min, get_max())
-}
-
-fn derive_character_base(characters: OsString) -> BaseCustom<char> {
-  let chrs = characters.to_str().unwrap();
-  BaseCustom::<char>::new(chrs.chars().collect())
-}
-
-fn chunk_sequence(d: &mut Digits, qty: usize) -> Vec<String> {
-  let mut counter = 0;
-  let mut result = vec![];
-  loop {
-    if counter >= qty { break; }
-    result.push(d.succ().to_s());
-    counter += 1;
-  }
-  result
-}
-
-fn usage() -> String {
-"abrute - AES Brute Force File Decryptor
-----------------------------------------
-Usage: abrute RANGE CHARACTERS TARGET
-
- RANGE\t\tCan be a single number or min max pair with a colon.
- \t\teg) abrute 4:6 asdf1234 file.tar.aes
-
- CHARACTERS\tShould not have quotes unless the password may have them.".to_string()
-}
+mod process_input;
+use process_input::*;
+mod core;
+use core::*;
+#[macro_use]
+extern crate clap;
+use clap::{Arg, App};
 
 fn run_app() -> Result<(), String> {
-  let mut args = env::args_os();
-  args.next();
+  let matches = App::new("abrute - AES Brute Force File Decryptor").
+    version(&format!("v{}", crate_version!())[..]).
+    version_short("v").
+    author(crate_authors!("\n")).
+    arg(Arg::with_name("RANGE").
+          required(true).
+          index(1)
+    ).
+    arg(Arg::with_name("CHARACTERS").
+          required(true).
+          index(2)
+    ).
+    arg(Arg::with_name("adjacent").
+          short("a").
+          long("adjacent").
+          takes_value(true)
+    ).
+    arg(Arg::with_name("TARGET").
+          required(true).
+          last(true)
+    ).
+    template("\
+-------------------------------------------------------------
+       {bin} {version}
+-------------------------------------------------------------
+           By: {author}
 
-  if args.len() == 0 {
-    println!("{}", usage());
-    return Ok(());
-  }
+USAGE:\tabrute <RANGE> <CHARACTERS> [OPTIONS] [--] <TARGET>
 
-  if args.len() < 3 {
-    writeln!(io::stderr(), "{}", usage()).err();
-    return Err("Invalid arguments provided.".to_string());
-  }
+  <RANGE>         Single digit or a range 4:6 for password length.
+  <CHARACTERS>    Characters to use in password attempt. Don't use quotes unless
+                  they may be in password. Backslash may escape characters such
+                  as space.
+  -a, --adjacent  Set a limit for allowed adjacent characters. Zero will not
+                  allow any characters of the same kind to neghibor in the
+                  attempts.
+  <TARGET>        Target file to decrypt.
+  -h, --help      Prints help information.
+  -v, --version   Prints version information.
 
-  let (min, max) = derive_min_max(args.next().unwrap());
-  let mapping = derive_character_base(args.next().unwrap());
+-------------------------------------------------------------
+USE OF THIS BINARY FALLS UNDER THE MIT LICENSE       (c) 2017").
+    get_matches();
+    
+  let (min, max) = derive_min_max(matches.value_of("RANGE").unwrap());
+  let mapping = derive_character_base(matches.value_of("CHARACTERS").unwrap());
   let mut sequencer = Digits::new(&mapping, "".to_string());
   sequencer.zero_fill(min as usize);
-  let target = args.next_back().unwrap();
+  let target = matches.value_of("TARGET").unwrap();
 
   if !Path::new(&target).exists() {
     writeln!(io::stderr(), "Error: File {:?} does not exist.", target).err();
     return Err("Please verify last argument is the proper filename.".to_string())
   }
 
-  loop {
-    if sequencer.length() > max as usize {
-      writeln!(io::stderr(), "Password not found for given length and character set.").err();
-      return Err("EOL".to_string());
-    }
-
-    print!("{}..", sequencer.to_s()); // Verbose
-    std::io::stdout().flush().unwrap();
-
-    let chunk = chunk_sequence(&mut sequencer, 128);
-    let code: Mutex<Vec<String>> = Mutex::new(vec![]);
-
-    chunk.par_iter().for_each(|ref value|
-      {
-        let output = Command::new("aescrypt").
-          arg("-d").
-          arg("-p").
-          arg(&value).
-          arg(&target).
-          output().
-          expect("Failed to execute decryption command!");
-
-        if output.status.success() {
-          let mut code_mutex = code.lock().unwrap();
-          code_mutex.push(value.clone().to_string());
-          println!("Success!\nPassword is: {}", value);
-        }
-      }
-    );
-
-    let code = code.lock().unwrap();
-    if !code.is_empty() {
-      // Other attempts will erase the output file as there is always an empty file
-      // created in place when trying to decrypt. So we need to take the correct
-      // answer and decrypt the source one last time.  Otherwise we'd need to isolate
-      // every attempt in a temp dir or mem dir and copying that much data that many
-      // times would be very slow and difficult to implement in a threaded way.
-      Command::new("aescrypt").
-        arg("-d").
-        arg("-p").
-        arg(code.first().unwrap()).
-        arg(&target).
-        output().
-        expect("Failed to execute decryption command!");
-      break;
-    }
-  }
-
-  Ok(())
+  core_loop(max, sequencer, target)
 }
 
 fn main() {

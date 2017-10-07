@@ -36,22 +36,26 @@ sudo cp target/release/abrute /usr/bin/
 ## Usage
 
 ```
-abrute - AES Brute Force File Decryptor
-----------------------------------------
-Usage: abrute RANGE CHARACTERS TARGET
+USAGE:	abrute <RANGE> <CHARACTERS> [OPTIONS] [--] <TARGET>
 
- RANGE       Can be a single number or min max pair with a colon.
-             eg) abrute 4:6 asdf1234 file.tar.aes
-
- CHARACTERS  Should not have quotes unless the password may have them.
+  <RANGE>         Single digit or a range 4:6 for password length.
+  <CHARACTERS>    Characters to use in password attempt. Don't use quotes unless
+                  they may be in password. Backslash may escape characters such
+                  as space.
+  -a, --adjacent  Set a limit for allowed adjacent characters. Zero will not
+                  allow any characters of the same kind to neghibor in the
+                  attempts.
+  <TARGET>        Target file to decrypt.
+  -h, --help      Prints help information.
+  -v, --version   Prints version information.
 ```
 
 ## License
 
 Licensed under either of
 
- * Apache License, Version 2.0, ([LICENSE-APACHE](LICENSE-APACHE) or http://www.apache.org/licenses/LICENSE-2.0)
- * MIT license ([LICENSE-MIT](LICENSE-MIT) or http://opensource.org/licenses/MIT)
+ * Apache License, Version 2.0, (http://www.apache.org/licenses/LICENSE-2.0)
+ * MIT license ([LICENSE-MIT](MIT-LICENSE) or http://opensource.org/licenses/MIT)
 
 at your option.
 
