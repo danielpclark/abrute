@@ -5,18 +5,26 @@ use std::process::Command;
 use rayon::prelude::*;
 extern crate num_cpus;
 
-fn chunk_sequence(d: &mut Digits, qty: usize) -> Vec<String> {
+fn chunk_sequence(d: &mut Digits, qty: usize, adj: Option<&str>) -> Vec<String> {
   let mut counter = 0;
   let mut result = vec![];
   loop {
     if counter >= qty { break; }
-    result.push(d.succ().to_s());
+    if let Some(a) = adj { 
+      if d.base() > 3 {
+        result.push(d.next_non_adjacent(a.parse::<u8>().unwrap() as usize).to_s());
+      } else {
+        result.push(d.succ().to_s());
+      }
+    } else {
+      result.push(d.succ().to_s());
+    }
     counter += 1;
   }
   result
 }
 
-pub fn core_loop<'a>(max: i32, mut sequencer: Digits<'a>, target: &str) -> Result<(),String> {
+pub fn core_loop<'a>(max: i32, mut sequencer: Digits<'a>, target: &str, adj: Option<&str>) -> Result<(),String> {
   loop {
     if sequencer.length() > max as usize {
       writeln!(io::stderr(), "Password not found for given length and character set.").err();
@@ -26,7 +34,7 @@ pub fn core_loop<'a>(max: i32, mut sequencer: Digits<'a>, target: &str) -> Resul
     print!("{}..", sequencer.to_s()); // Verbose
     io::stdout().flush().unwrap();
 
-    let chunk = chunk_sequence(&mut sequencer, num_cpus::get() * 32);
+    let chunk = chunk_sequence(&mut sequencer, num_cpus::get() * 32, adj);
     let code: Mutex<Vec<String>> = Mutex::new(vec![]);
 
     chunk.par_iter().for_each(|ref value|

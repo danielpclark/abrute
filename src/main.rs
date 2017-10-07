@@ -12,6 +12,8 @@ use std::path::Path;
 use std::io::{self, Write}; 
 mod process_input;
 use process_input::*;
+mod validators;
+use validators::*;
 mod core;
 use core::*;
 #[macro_use]
@@ -34,7 +36,8 @@ fn run_app() -> Result<(), String> {
     arg(Arg::with_name("adjacent").
           short("a").
           long("adjacent").
-          takes_value(true)
+          takes_value(true).
+          validator(validate_is_digit)
     ).
     arg(Arg::with_name("TARGET").
           required(true).
@@ -68,13 +71,14 @@ USE OF THIS BINARY FALLS UNDER THE MIT LICENSE       (c) 2017").
   let mut sequencer = Digits::new(&mapping, "".to_string());
   sequencer.zero_fill(min as usize);
   let target = matches.value_of("TARGET").unwrap();
+  let adjacent = matches.value_of("adjacent");
 
   if !Path::new(&target).exists() {
     writeln!(io::stderr(), "Error: File {:?} does not exist.", target).err();
     return Err("Please verify last argument is the proper filename.".to_string())
   }
 
-  core_loop(max, sequencer, target)
+  core_loop(max, sequencer, target, adjacent)
 }
 
 fn main() {
