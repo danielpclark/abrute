@@ -54,7 +54,7 @@ fn run_app() -> Result<(), String> {
 -------------------------------------------------------------
            By: {author}
 
-USAGE:\tabrute <RANGE> <CHARACTERS> [OPTIONS] [--] <TARGET>
+USAGE:\tabrute <RANGE> <CHARACTERS> [OPTIONS] -- <TARGET>
 
   <RANGE>         Single digit or a range 4:6 for password length.
   <CHARACTERS>    Characters to use in password attempt. Don't use quotes unless
@@ -64,7 +64,8 @@ USAGE:\tabrute <RANGE> <CHARACTERS> [OPTIONS] [--] <TARGET>
                   allow any characters of the same kind to neghibor in the
                   attempts.
   -s, --start     Starting character sequence to begin at.
-  <TARGET>        Target file to decrypt.
+  <TARGET>        Target file to decrypt.  The target must be preceeded by a
+                  double dash: -- target.aes
   -h, --help      Prints help information.
   -v, --version   Prints version information.
 
