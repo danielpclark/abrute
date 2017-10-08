@@ -46,5 +46,8 @@ else
     fi
 fi
 
+cargo build --release
+sudo cp target/release/abrute /usr/bin
 
+echo "Thank you for installing Abrute. Enjoy !"
 
