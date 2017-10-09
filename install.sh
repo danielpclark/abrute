@@ -1,10 +1,7 @@
 #!/bin/bash
 
-rust_install_status=`rustc --version`
-rustc_prefix="rustc"
-
 # Checking if Rust is installed
-if [[ $rust_install_status == $rustc_prefix* ]];
+if [ `which rustc` ];
 then
     # Rust is installed
     echo "Rust already installed"
