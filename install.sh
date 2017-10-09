@@ -10,7 +10,7 @@ else
     # Ask for user consent before proceeding with installation
     read -p "Rust is not installed. Do you want to install Rust now ? (necessary for Abrute) [y/n] " Rust_answer
 
-    if [ $Rust_answer -eq "y" ];
+    if [ "$Rust_answer" == "y" ];
     then
         # User agreed, proceed with installation
         curl https://sh.rustup.rs -sSf | sh
