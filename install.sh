@@ -54,6 +54,7 @@ else
     sudo cp target/release/abrute /usr/bin
 
     # Cleaning
+    cd ..
     rm master.zip
     rm -r abrute-master/
 fi
