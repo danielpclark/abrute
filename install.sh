@@ -29,20 +29,14 @@ then
     # Aescrypt is already installed
     echo "Aescrypt already installed"
 else
-    read -p "Aescrypt is not installed. Do you want to install Aescrypt now ? (necessary for Abrute) [y/n] " AES_answer
-
-    if [ $AES_answer == y ];
-    then
-        User agreed, proceed with installation
-        wget https://www.aescrypt.com/download/v3/linux/aescrypt-3.13.tgz
-        tar -xzf aescrypt-3.13.tgz
-        cd aescrypt-3.13/src
-        make && sudo make install
-        cd ../.. && rm -rf aescrypt-3.13 && rm aescrypt-3.13.tgz
-    else
-        # User refused, abort installation
-        exit 1
-    fi
+    echo "Installing Aescrypt"
+    User agreed, proceed with installation
+    wget https://www.aescrypt.com/download/v3/linux/aescrypt-3.13.tgz
+    tar -xzf aescrypt-3.13.tgz
+    cd aescrypt-3.13/src
+    make && sudo make install
+    cd ../.. && rm -rf aescrypt-3.13 && rm aescrypt-3.13.tgz
+    echo "Aescrypt installed"
 fi
 
 cargo build --release
