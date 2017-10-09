@@ -49,7 +49,7 @@ else
     cd abrute-master
     
     # Building and installing
-    cargo build --release
+    bash -lc "cargo build --release"
     sudo cp target/release/abrute /usr/bin
 
     # Cleaning
