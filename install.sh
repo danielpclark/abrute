@@ -39,8 +39,24 @@ else
     echo "Aescrypt installed"
 fi
 
-cargo build --release
-sudo cp target/release/abrute /usr/bin
+# Checking for the existence of source files
+if [ -d src ] && [ -d .git ];
+then
+    # The source files are already there. We can build and install Abrute.
+    cargo build --release
+    sudo cp target/release/abrute /usr/bin
+else
+    # Downloading the source files
+    wget https://github.com/danielpclark/abrute/archive/master.zip
+    unzip master.zip
+    cd abrute-master
+    cargo build --release
+    sudo cp target/release/abrute /usr/bin
+
+    # Cleaning
+    rm master.zip
+    rm -r abrute-master/
+fi
 
 echo "Thank you for installing Abrute. Enjoy !"
 
