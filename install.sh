@@ -29,8 +29,8 @@ then
     # Aescrypt is already installed
     echo "Aescrypt already installed"
 else
+    # Aescrypt is not installed, proceed with installation
     echo "Installing Aescrypt"
-    User agreed, proceed with installation
     wget https://www.aescrypt.com/download/v3/linux/aescrypt-3.13.tgz
     tar -xzf aescrypt-3.13.tgz
     cd aescrypt-3.13/src
@@ -50,6 +50,8 @@ else
     wget https://github.com/danielpclark/abrute/archive/master.zip
     unzip master.zip
     cd abrute-master
+    
+    # Building and installing
     cargo build --release
     sudo cp target/release/abrute /usr/bin
 
