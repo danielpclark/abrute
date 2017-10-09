@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -l
 
 # Checking if Rust is installed
 if [ `which rustc` ];
