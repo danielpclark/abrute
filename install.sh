@@ -16,8 +16,7 @@ else
     if [ $Rust_answer == y ];
     then
         # User agreed, proceed with installation
-        # curl https://sh.rustup.rs -sSf | sh
-        echo "là on installe Rust"
+        curl https://sh.rustup.rs -sSf | sh
     else
         # User refused, abort installation
         exit 1
