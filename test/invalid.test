@@ -17,4 +17,34 @@ describe "* abrute with invalid input"
     target/debug/abrute 4:4 asdf -- test/data/example-thingy.file.aes 2>/dev/null
     assert unequal $? 0
   end
+
+  it "does not panic with invalid range"
+    message=`target/debug/abrute asdf asdf -- asdf 2>& 1`
+    echo "$message" | grep -q "thread*"
+    assert unequal $? 0
+  end
+
+  it "does not panic with file missing"
+    message=`target/debug/abrute 4 asdf -- asdf 2>& 1`
+    echo "$message" | grep -q "thread*"
+    assert unequal $? 0
+  end
+
+  it "does not panic with invalid adjacent number"
+    message=`target/debug/abrute 4 asdf -a g -- asdf 2>& 1`
+    echo "$message" | grep -q "thread*"
+    assert unequal $? 0
+  end
+
+  it "does not panic with invalid character starters"
+    message=`target/debug/abrute 4 asdf -s 1234 -- asdf 2>& 1`
+    echo "$message" | grep -q "thread*"
+    assert unequal $? 0
+  end
+
+  it "does not show invalid double dash on invalid dash usage"
+    message=`target/debug/abrute 4 asdf asdf 2>& 1`
+    echo "$message" | grep -q " -- "
+    assert equal $? 0
+  end
 end
