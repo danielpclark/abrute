@@ -9,8 +9,11 @@ a secondary system.
 ## Installation
 
 To use the install script you need to have the following commands available on your
-system `curl wget unzip sudo cc` and possibly other build essentials for C.  For Ubuntu
-and Docker images of Ubuntu you can install these prerequisites with:
+system `curl wget unzip sudo cc` and possibly other build essentials for C.
+
+---
+
+For Ubuntu and Docker images of Ubuntu you can install these prerequisites with:
 
 ```bash
 apt-get update && apt-get install curl wget unzip sudo build-essential
@@ -18,6 +21,7 @@ apt-get update && apt-get install curl wget unzip sudo build-essential
 
 _NOTE: if you are not root you may need to precede `apt-get` with `sudo`_
 
+---
 
 The `install.sh` script will check for Rust and aescrypt and proceed to install them
 if they are missing _(it will ask you if you want to install Rust)_.
@@ -28,9 +32,7 @@ First download the installation script locally.
 curl https://raw.githubusercontent.com/danielpclark/abrute/master/install.sh > install.sh
 ```
 
-Then verify that the contents of the installation script is safe to use (a no brainer).
-
-Then run
+Then verify that the contents of the installation script is safe to use (a no brainer).  Then run
 
 ```bash
 bash install.sh
