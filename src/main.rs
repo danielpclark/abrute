@@ -10,6 +10,10 @@ extern crate rayon;
 use digits::Digits;
 use std::path::Path;
 use std::io::{self, Write}; 
+use std::process::{Command,Stdio};
+mod result;
+use result::Error;
+use std::error::Error as StdError;
 mod process_input;
 use process_input::*;
 mod validators;
@@ -20,11 +24,12 @@ use core::*;
 extern crate clap;
 use clap::{Arg, App};
 
-fn run_app() -> Result<(), String> {
+fn run_app() -> Result<(), Error> {
   let matches = App::new("abrute - AES Brute Force File Decryptor").
     version(&format!("v{}", crate_version!())[..]).
     version_short("v").
     author(crate_authors!("\n")).
+    usage("abrute <RANGE> <CHARACTERS> [OPTIONS] -- <TARGET>").
     arg(Arg::with_name("RANGE").
           required(true).
           index(1)
@@ -36,8 +41,7 @@ fn run_app() -> Result<(), String> {
     arg(Arg::with_name("adjacent").
           short("a").
           long("adjacent").
-          takes_value(true).
-          validator(validate_is_digit)
+          takes_value(true)
     ).
     arg(Arg::with_name("start").
           short("s").
@@ -54,49 +58,67 @@ fn run_app() -> Result<(), String> {
 -------------------------------------------------------------
            By: {author}
 
-USAGE:\tabrute <RANGE> <CHARACTERS> [OPTIONS] -- <TARGET>
 
-  <RANGE>         Single digit or a range 4:6 for password length.
-  <CHARACTERS>    Characters to use in password attempt. Don't use quotes unless
-                  they may be in password. Backslash may escape characters such
-                  as space.
-  -a, --adjacent  Set a limit for allowed adjacent characters. Zero will not
-                  allow any characters of the same kind to neghibor in the
-                  attempts.
-  -s, --start     Starting character sequence to begin at.
-  <TARGET>        Target file to decrypt.  The target must be preceeded by a
-                  double dash: -- target.aes
-  -h, --help      Prints help information.
-  -v, --version   Prints version information.
+  USAGE:\tabrute <RANGE> <CHARACTERS> [OPTIONS] -- <TARGET>
+
+   <RANGE>         Single digit or a range 4:6 for password length.
+   <CHARACTERS>    Characters to use in password attempt. Don't use quotes
+                   unless they may be in the password. Backslash may escape
+                   characters such as space.
+   -a, --adjacent  Set a limit for allowed adjacent characters. Zero will
+                   not allow any characters of the same kind to neighbor
+                   in the attempts.
+   -s, --start     Starting character sequence to begin with.
+   <TARGET>        Target file to decrypt.  The target must be preceeded
+                   by a double dash: -- target.aes
+   -h, --help      Prints help information.
+   -v, --version   Prints version information.
 
 -------------------------------------------------------------
 USE OF THIS BINARY FALLS UNDER THE MIT LICENSE       (c) 2017").
     get_matches();
+
+  if Command::new("aescrypt").
+    stdout(Stdio::null()).
+    stderr(Stdio::null()).
+    spawn().
+    is_err() {
+    return Err(Error::AescryptMissing);
+  }
     
-  let (min, max) = derive_min_max(matches.value_of("RANGE").unwrap());
+  let (min, max) = derive_min_max(matches.value_of("RANGE").unwrap())?;
   let mapping = derive_character_base(matches.value_of("CHARACTERS").unwrap());
   
   if let Some(s) = matches.value_of("start") {
-    let result = validate_string_length(s, max);
-    if result.is_err() { return result; }
+    let _ = validate_string_length(s, max)?;
+
+    let chrctrs: Vec<char> = matches.value_of("CHARACTERS").unwrap().chars().collect();
+    let mut itr = s.chars();
+    loop {
+      match itr.next() {
+        Some(ref c) => {
+          if !chrctrs.contains(c) { return Err(Error::InvalidCharacterSet); }
+        },
+        _ => break,
+      }
+    }
   }
 
   let mut sequencer = Digits::new(&mapping, matches.value_of("start").unwrap_or("").to_string());
   sequencer.zero_fill(min as usize);
-  let target = matches.value_of("TARGET").unwrap();
+  let target = matches.value_of("TARGET").unwrap_or("");
   let adjacent = matches.value_of("adjacent");
 
   let seq_base = sequencer.base();
   if let &Some(num) = &adjacent { 
+    validate_adjacent_input(num.to_string())?;
     if seq_base > 3 {
-      validate_is_digit(num.to_string()).ok();
       sequencer.prep_non_adjacent(num.parse::<usize>().unwrap()); 
     }
   }
 
   if !Path::new(&target).exists() {
-    writeln!(io::stderr(), "Error: File {:?} does not exist.", target).err();
-    return Err("Please verify last argument is the proper filename.".to_string())
+    return Err(Error::FileMissing)
   }
 
   core_loop(max, sequencer, target, adjacent)
@@ -107,7 +129,12 @@ fn main() {
     match run_app() {
       Ok(_) => 0,
       Err(err) => {
-        writeln!(io::stderr(), "error: {:?}", err).unwrap();
+        writeln!(
+          io::stderr(),
+          "Error: {}\n{}\n\nUse `abrute -h` for a help menu.",
+          err,
+          err.description()
+        ).unwrap();
         1
       }
     }

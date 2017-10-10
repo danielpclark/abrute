@@ -42,6 +42,12 @@ describe "* abrute with invalid input"
     assert unequal $? 0
   end
 
+  it "does not panic with invalid characters length"
+    message=`target/debug/abrute 4 asdf -s 12 -- asdf 2>& 1`
+    echo "$message" | grep -q "thread*"
+    assert unequal $? 0
+  end
+
   it "does not show invalid double dash on invalid dash usage"
     message=`target/debug/abrute 4 asdf asdf 2>& 1`
     echo "$message" | grep -q " -- "

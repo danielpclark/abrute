@@ -3,6 +3,7 @@ use digits::Digits;
 use std::io::{self, Write}; 
 use std::process::Command;
 use rayon::prelude::*;
+use super::result::Error;
 extern crate num_cpus;
 
 fn chunk_sequence(d: &mut Digits, qty: usize, adj: Option<&str>) -> Vec<String> {
@@ -25,11 +26,10 @@ fn chunk_sequence(d: &mut Digits, qty: usize, adj: Option<&str>) -> Vec<String> 
   result
 }
 
-pub fn core_loop<'a>(max: usize, mut sequencer: Digits<'a>, target: &str, adj: Option<&str>) -> Result<(),String> {
+pub fn core_loop<'a>(max: usize, mut sequencer: Digits<'a>, target: &str, adj: Option<&str>) -> Result<(), Error> {
   loop {
     if sequencer.length() > max {
-      writeln!(io::stderr(), "Password not found for given length and character set.").err();
-      return Err("EOL".to_string());
+      return Err(Error::PasswordNotFound);
     }
 
     print!("{}..", sequencer.to_s()); // Verbose
@@ -46,7 +46,7 @@ pub fn core_loop<'a>(max: usize, mut sequencer: Digits<'a>, target: &str, adj: O
           arg(&value).
           arg(&target).
           output().
-          expect("Failed to execute decryption command!");
+          unwrap();
 
         if output.status.success() {
           let mut code_mutex = code.lock().unwrap();
@@ -69,7 +69,7 @@ pub fn core_loop<'a>(max: usize, mut sequencer: Digits<'a>, target: &str, adj: O
         arg(code.first().unwrap()).
         arg(&target).
         output().
-        expect("Failed to execute decryption command!");
+        unwrap();
       break;
     }
   }
