@@ -10,15 +10,16 @@ fn chunk_sequence(d: &mut Digits, qty: usize, adj: Option<&str>) -> Vec<String> 
   let mut result = vec![];
   loop {
     if counter >= qty { break; }
+
     if let Some(a) = adj { 
       if d.base() > 3 {
-        result.push(d.next_non_adjacent(a.parse::<u8>().unwrap() as usize).to_s());
-      } else {
-        result.push(d.succ().to_s());
+        result.push(d.step_non_adjacent(a.parse::<u8>().unwrap() as usize).to_s());
+        counter += 1;
+        continue;
       }
-    } else {
-      result.push(d.succ().to_s());
     }
+
+    result.push(d.succ().to_s());
     counter += 1;
   }
   result

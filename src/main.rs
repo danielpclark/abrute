@@ -86,6 +86,14 @@ USE OF THIS BINARY FALLS UNDER THE MIT LICENSE       (c) 2017").
   let target = matches.value_of("TARGET").unwrap();
   let adjacent = matches.value_of("adjacent");
 
+  let seq_base = sequencer.base();
+  if let &Some(num) = &adjacent { 
+    if seq_base > 3 {
+      validate_is_digit(num.to_string()).ok();
+      sequencer.prep_non_adjacent(num.parse::<usize>().unwrap()); 
+    }
+  }
+
   if !Path::new(&target).exists() {
     writeln!(io::stderr(), "Error: File {:?} does not exist.", target).err();
     return Err("Please verify last argument is the proper filename.".to_string())
