@@ -2,6 +2,8 @@
 
 # abrute - Multi-threaded AES Brute Force File Decryption
 
+**Also supports encrypted ZIP files!**
+
 Rather straight forward.  It works but has much more improvements yet to come.
 This will use your CPU to the best of its ability so you may want to use this on
 a secondary system.
