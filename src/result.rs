@@ -10,6 +10,7 @@ pub enum Error {
   InvalidRange,
   InvalidStringLength,
   PasswordNotFound,
+  UnzipMissing,
 }
 
 impl fmt::Display for Error {
@@ -22,6 +23,7 @@ impl fmt::Display for Error {
       Error::InvalidRange          => f.write_str("InvalidRange"         ),
       Error::InvalidStringLength   => f.write_str("InvalidStringLength"  ),
       Error::PasswordNotFound      => f.write_str("PasswordNotFound"     ),
+      Error::UnzipMissing          => f.write_str("UnzipMissing"         ),
     }
   }
 }
@@ -61,6 +63,11 @@ fn password_not_found() -> &'static str {
   "Password not found for given length and character set."
 }
 
+#[inline]
+fn unzip_missing() -> &'static str {
+  "unzip does not appear to be installed."
+}
+
 impl StdError for Error {
   fn description(&self) -> &str {
     match *self {
@@ -71,6 +78,7 @@ impl StdError for Error {
       Error::InvalidRange          => invalid_range(),
       Error::InvalidStringLength   => invalid_string_length(),
       Error::PasswordNotFound      => password_not_found(),
+      Error::UnzipMissing          => unzip_missing(),
     }
   }
 }
