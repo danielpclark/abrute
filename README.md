@@ -81,6 +81,7 @@ sudo cp target/release/abrute /usr/bin/
                    not allow any characters of the same kind to neighbor
                    in the attempts.
    -s, --start     Starting character sequence to begin with.
+   -z, --zip       Use `unzip` decryption instead of `aescrypt`.
    <TARGET>        Target file to decrypt.  The target must be preceeded
                    by a double dash: -- target.aes
    -h, --help      Prints help information.
