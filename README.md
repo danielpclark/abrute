@@ -71,20 +71,20 @@ sudo cp target/release/abrute /usr/bin/
 ## Usage
 
 ```
-USAGE:	abrute <RANGE> <CHARACTERS> [OPTIONS] -- <TARGET>
-
-  <RANGE>         Single digit or a range 4:6 for password length.
-  <CHARACTERS>    Characters to use in password attempt. Don't use quotes unless
-                  they may be in password. Backslash may escape characters such
-                  as space.
-  -a, --adjacent  Set a limit for allowed adjacent characters. Zero will not
-                  allow any characters of the same kind to neghibor in the
-                  attempts.
-  -s, --start     Starting character sequence to begin at.
-  <TARGET>        Target file to decrypt.  The target must be preceeded by a
-                  double dash: -- target.aes
-  -h, --help      Prints help information.
-  -v, --version   Prints version information.
+  USAGE:  abrute <RANGE> <CHARACTERS> [OPTIONS] -- <TARGET>
+  
+   <RANGE>         Single digit or a range 4:6 for password length.
+   <CHARACTERS>    Characters to use in password attempt. Don't use quotes
+                   unless they may be in the password. Backslash may escape
+                   characters such as space.
+   -a, --adjacent  Set a limit for allowed adjacent characters. Zero will
+                   not allow any characters of the same kind to neighbor
+                   in the attempts.
+   -s, --start     Starting character sequence to begin with.
+   <TARGET>        Target file to decrypt.  The target must be preceeded
+                   by a double dash: -- target.aes
+   -h, --help      Prints help information.
+   -v, --version   Prints version information.
 ```
 
 ## License
