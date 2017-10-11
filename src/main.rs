@@ -8,9 +8,7 @@
 extern crate digits;
 extern crate rayon;
 use digits::Digits;
-use std::path::Path;
 use std::io::{self, Write}; 
-use std::process::{Command,Stdio};
 mod result;
 use result::Error;
 use std::error::Error as StdError;
@@ -48,6 +46,11 @@ fn run_app() -> Result<(), Error> {
           long("start").
           takes_value(true)
     ).
+    arg(Arg::with_name("zip").
+          short("z").
+          long("zip").
+          takes_value(false)
+    ).
     arg(Arg::with_name("TARGET").
           required(true).
           last(true)
@@ -69,6 +72,7 @@ fn run_app() -> Result<(), Error> {
                    not allow any characters of the same kind to neighbor
                    in the attempts.
    -s, --start     Starting character sequence to begin with.
+   -z, --zip       Use `unzip` decryption instead of `aescrypt`.
    <TARGET>        Target file to decrypt.  The target must be preceeded
                    by a double dash: -- target.aes
    -h, --help      Prints help information.
@@ -78,50 +82,31 @@ fn run_app() -> Result<(), Error> {
 USE OF THIS BINARY FALLS UNDER THE MIT LICENSE       (c) 2017").
     get_matches();
 
-  if Command::new("aescrypt").
-    stdout(Stdio::null()).
-    stderr(Stdio::null()).
-    spawn().
-    is_err() {
-    return Err(Error::AescryptMissing);
+  if matches.is_present("zip") {
+    validate_unzip_executable()?;
+  } else {
+    validate_aescrpyt_executable()?;
   }
     
   let (min, max) = derive_min_max(matches.value_of("RANGE").unwrap())?;
-  let mapping = derive_character_base(matches.value_of("CHARACTERS").unwrap());
   
-  if let Some(s) = matches.value_of("start") {
-    let _ = validate_string_length(s, max)?;
+  validate_start_string(&matches, max)?;
 
-    let chrctrs: Vec<char> = matches.value_of("CHARACTERS").unwrap().chars().collect();
-    let mut itr = s.chars();
-    loop {
-      match itr.next() {
-        Some(ref c) => {
-          if !chrctrs.contains(c) { return Err(Error::InvalidCharacterSet); }
-        },
-        _ => break,
-      }
-    }
-  }
-
+  let mapping = derive_character_base(matches.value_of("CHARACTERS").unwrap());
   let mut sequencer = Digits::new(&mapping, matches.value_of("start").unwrap_or("").to_string());
   sequencer.zero_fill(min as usize);
+
   let target = matches.value_of("TARGET").unwrap_or("");
   let adjacent = matches.value_of("adjacent");
 
-  let seq_base = sequencer.base();
-  if let &Some(num) = &adjacent { 
-    validate_adjacent_input(num.to_string())?;
-    if seq_base > 3 {
-      sequencer.prep_non_adjacent(num.parse::<usize>().unwrap()); 
-    }
-  }
+  validate_and_prep_sequencer_adjacent(&mut sequencer, adjacent)?;
+  validate_file_exists(&target)?;
 
-  if !Path::new(&target).exists() {
-    return Err(Error::FileMissing)
+  if matches.is_present("zip") {
+    unzip_core_loop(max, sequencer, target, adjacent)
+  } else {
+    aescrypt_core_loop(max, sequencer, target, adjacent)
   }
-
-  core_loop(max, sequencer, target, adjacent)
 }
 
 fn main() {

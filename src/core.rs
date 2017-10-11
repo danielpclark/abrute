@@ -1,12 +1,13 @@
 use std::sync::Mutex;
 use digits::Digits;
 use std::io::{self, Write}; 
-use std::process::Command;
+use std::process::{Command, Output};
 use rayon::prelude::*;
 use super::result::Error;
 extern crate num_cpus;
 
-fn chunk_sequence(d: &mut Digits, qty: usize, adj: Option<&str>) -> Vec<String> {
+fn chunk_sequence(d: &mut Digits, adj: Option<&str>) -> Vec<String> {
+  let qty: usize = num_cpus::get() * 32;
   let mut counter = 0;
   let mut result = vec![];
   loop {
@@ -26,27 +27,56 @@ fn chunk_sequence(d: &mut Digits, qty: usize, adj: Option<&str>) -> Vec<String> 
   result
 }
 
-pub fn core_loop<'a>(max: usize, mut sequencer: Digits<'a>, target: &str, adj: Option<&str>) -> Result<(), Error> {
+fn aes_command(value: &str, target: &str) -> Output {
+  Command::new("aescrypt").
+    arg("-d").
+    arg("-p").
+    arg(value).
+    arg(target).
+    output().
+    unwrap()
+}
+
+fn unzip_command(value: &str, target: &str) -> Output {
+  Command::new("unzip").
+    arg("-u").
+    arg("-P").
+    arg(value).
+    arg(target).
+    output().
+    unwrap()
+}
+
+fn progress_report<'a>(sequencer: &Digits<'a>) {
+  print!("{}..", sequencer.to_s()); // Verbose
+  io::stdout().flush().unwrap();
+}
+
+fn has_reached_end<'a>(sequencer: &Digits<'a>, max: usize) -> Result<(), Error> {
+  if sequencer.length() > max {
+    return Err(Error::PasswordNotFound);
+  }
+
+  Ok(())
+}
+
+pub fn aescrypt_core_loop<'a>(
+  max: usize,
+  mut sequencer: Digits<'a>,
+  target: &str,
+  adj: Option<&str>
+  ) -> Result<(), Error> {
+
   loop {
-    if sequencer.length() > max {
-      return Err(Error::PasswordNotFound);
-    }
+    has_reached_end(&sequencer, max)?;
+    progress_report(&sequencer);
 
-    print!("{}..", sequencer.to_s()); // Verbose
-    io::stdout().flush().unwrap();
-
-    let chunk = chunk_sequence(&mut sequencer, num_cpus::get() * 32, adj);
+    let chunk = chunk_sequence(&mut sequencer, adj);
     let code: Mutex<Vec<String>> = Mutex::new(vec![]);
 
     chunk.par_iter().for_each(|ref value|
       {
-        let output = Command::new("aescrypt").
-          arg("-d").
-          arg("-p").
-          arg(&value).
-          arg(&target).
-          output().
-          unwrap();
+        let output = aes_command(&value, &target);
 
         if output.status.success() {
           let mut code_mutex = code.lock().unwrap();
@@ -63,15 +93,45 @@ pub fn core_loop<'a>(max: usize, mut sequencer: Digits<'a>, target: &str, adj: O
       // answer and decrypt the source one last time.  Otherwise we'd need to isolate
       // every attempt in a temp dir or mem dir and copying that much data that many
       // times would be very slow and difficult to implement in a threaded way.
-      Command::new("aescrypt").
-        arg("-d").
-        arg("-p").
-        arg(code.first().unwrap()).
-        arg(&target).
-        output().
-        unwrap();
+      
+      aes_command(code.first().unwrap(), target);
+
       break;
     }
   }
+
   Ok(())
+}
+
+pub fn unzip_core_loop<'a>(
+  max: usize,
+  mut sequencer: Digits<'a>,
+  target: &str,
+  adj: Option<&str>
+  ) -> Result<(), Error> {
+
+  loop {
+    has_reached_end(&sequencer, max)?;
+    progress_report(&sequencer);
+
+    let chunk = chunk_sequence(&mut sequencer, adj);
+    let code: Mutex<Vec<Result<(), Error>>> = Mutex::new(vec![]);
+
+    chunk.par_iter().for_each(|ref value|
+      {
+        let output = unzip_command(&value, &target);
+
+        if output.status.success() {
+          let mut code_mutex = code.lock().unwrap();
+          code_mutex.push(Ok(()));
+          println!("Success!\nPassword is: {}", value);
+        }
+      }
+    );
+
+    let mut code = code.lock().unwrap();
+    if !code.is_empty() {
+      return code.pop().unwrap();
+    }
+  }
 }
