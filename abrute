@@ -1,4 +1,5 @@
-.\" Manpage for abrutei
+.\" Manpage for abrute
+.\" Contact alcamech@gmail.com to correct errors or typos.
 .TH man 1 "12 October 2017" "1.0" "abrute man page"
 .SH NAME
 abrute \- Multi-threaded AES Brute Force File Decryption
@@ -68,6 +69,6 @@ Report bugs to <https://github.com/danielpclark/abrute/issues>
 .SH BUGS
 No known bugs.
 .SH AUTHOR
-Lawton Mizell <https://github.com/Alcamech>
+Daniel P. Clark <6ftdan@gmail.com>
 .SH SEE ALSO
-Github Repo <https://github.com/danielpclark/abrute>:
+Github Repo <https://github.com/danielpclark/abrute>
