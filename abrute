@@ -1,6 +1,6 @@
 .\" Manpage for abrute
 .\" Contact alcamech@gmail.com to correct errors or typos.
-.TH man 1 "12 October 2017" "1.0" "abrute man page"
+.TH abrute 1 "12 October 2017" "abrute"
 .SH NAME
 abrute \- Multi-threaded AES Brute Force File Decryption
 .SH SYNOPSIS
@@ -32,17 +32,17 @@ Multi-threaded AES Brute Force File Decryption
 Decrypts a file with a range of 4, characters of 1234, and a target path to the
 example.file.aes
 
-abrute 4 1234 -- test/data/example.file.aes 1>/dev/null
+abrute 4 1234 -- example.file.aes
 
 Decrypts a file with a range of 4, characters of 1234, an option of beginning
 with a character sequence of 2222, and a target path to the example.file.aes
 
-abrute 4 1234 -s 2222 -- test/data/example.file.aes 1>/dev/null
+abrute 4 1234 -s 2222 -- example.file.aes
 
 Decrypts a file with a range of 4, characters of 1234, an option of setting the
-allowed adjacent characters to be 0, and a target path ot the example.file.aes
+allowed adjacent characters to be 0, and a target path to the example.file.aes
 
-abrute 4 1234 -a 0 -- test/data/example.file.aes 1>/dev/null
+abrute 4 1234 -a 0 -- example.file.aes
 .SH COPYRIGHT
 Copyright 2017 Daniel P. Clark
 
@@ -66,8 +66,6 @@ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 .SH REPORTING BUGS
 Report bugs to <https://github.com/danielpclark/abrute/issues>
-.SH BUGS
-No known bugs.
 .SH AUTHOR
 Daniel P. Clark <6ftdan@gmail.com>
 .SH SEE ALSO
