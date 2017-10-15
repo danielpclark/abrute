@@ -54,3 +54,15 @@ describe "* abrute with invalid input"
     assert equal $? 0
   end
 end
+
+describe "* abrute with failed results"
+  # false positive: `unzip -uP dfsd example.zip`
+  it "fails with unzip"
+    folder="$(pwd)"
+    cd test/data/
+    ../../target/debug/abrute 4 asdfg -z -a 0 -- example.zip >/dev/null
+    assert unequal $? 0
+    cd $folder
+    assert file_absent test/data/zipped.file
+  end 
+end
