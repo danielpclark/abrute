@@ -7,11 +7,14 @@
 
 use std::sync::Mutex;
 use digits::Digits;
-use std::io::{self, Write}; 
+use std::io::{self, Write, Read}; 
 use std::process::{Command, Output};
 use rayon::prelude::*;
 use super::result::Error;
 extern crate num_cpus;
+extern crate tempdir;
+use self::tempdir::TempDir;
+use std::{fs,path,env};
 
 fn chunk_sequence(d: &mut Digits, adj: Option<&str>) -> Vec<String> {
   let qty: usize = num_cpus::get() * 32;
@@ -45,7 +48,10 @@ fn aes_command(value: &str, target: &str) -> Output {
 }
 
 fn unzip_command(value: &str, target: &str) -> Output {
+  let mut dir = path::PathBuf::from(&target);
+  dir.pop();
   Command::new("unzip").
+    current_dir(dir).
     arg("-u").
     arg("-P").
     arg(value).
@@ -117,28 +123,61 @@ pub fn unzip_core_loop<'a>(
   adj: Option<&str>
   ) -> Result<(), Error> {
 
-  loop {
-    has_reached_end(&sequencer, max)?;
-    progress_report(&sequencer);
+  if let Ok(dir) = TempDir::new("abrute") {
+    let cwd = env::current_dir().unwrap();
+    let working = path::Path::new(&dir.path().as_os_str()).join(&target);
+    fs::copy(&target, &working).unwrap();
+    assert!(working.is_file());
+    let target = working.to_str().unwrap();
 
-    let chunk = chunk_sequence(&mut sequencer, adj);
-    let code: Mutex<Vec<Result<(), Error>>> = Mutex::new(vec![]);
+    loop {
+      has_reached_end(&sequencer, max)?;
+      progress_report(&sequencer);
 
-    chunk.par_iter().for_each(|ref value|
-      {
-        let output = unzip_command(&value, &target);
+      let chunk = chunk_sequence(&mut sequencer, adj);
+      let code: Mutex<Vec<Result<(), Error>>> = Mutex::new(vec![]);
 
-        if output.status.success() {
-          let mut code_mutex = code.lock().unwrap();
-          code_mutex.push(Ok(()));
-          println!("Success!\nPassword is: {}", value);
+      chunk.par_iter().for_each(|ref value|
+        {
+          let output = unzip_command(&value, &target);
+
+          if output.status.success() {
+            let mut conspiracy = true;
+            if fs::read_dir(&dir).unwrap().count() > 1 {
+              for entry in fs::read_dir(&dir).
+                expect("Failure reading tempdir's contents.") {
+                let entry = entry.
+                  expect("Failure reading specific file in tempdir.");
+
+                if path::Path::new(&entry.path()) != path::Path::new(&target) {
+                  if fs::File::open(&entry.path()).
+                    expect("Could not open file for validity check in tempdir.").
+                    bytes().count() > 1 {
+                    conspiracy = false;
+                    let file_name = entry.file_name();
+                    let dest_file = path::Path::new(&cwd).join(file_name);
+
+                    fs::copy(entry.path(), dest_file).
+                      expect("Failure copying file from tempdir.");
+                  }
+                }
+              }
+              if !conspiracy {
+                let mut code_mutex = code.lock().unwrap();
+                code_mutex.push(Ok(()));
+                println!("Success!\nPassword is: {}", value);
+              }
+            }
+          }
         }
-      }
-    );
+      );
 
-    let mut code = code.lock().unwrap();
-    if !code.is_empty() {
-      return code.pop().unwrap();
+      let mut code = code.lock().unwrap();
+      if !code.is_empty() {
+        return code.pop().unwrap();
+      }
     }
+  } else {
+    return Err(Error::FailedTempDir);
   }
 }

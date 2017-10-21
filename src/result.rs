@@ -11,6 +11,7 @@ use std::error::Error as StdError;
 #[derive(Debug)]
 pub enum Error {
   AescryptMissing,
+  FailedTempDir,
   FileMissing,
   InvalidAdjacentNumber,
   InvalidCharacterSet,
@@ -24,6 +25,7 @@ impl fmt::Display for Error {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
     match *self {
       Error::AescryptMissing       => f.write_str("AescryptMissing"      ),
+      Error::FailedTempDir         => f.write_str("FailedTempDir"        ),
       Error::FileMissing           => f.write_str("FileMissing"          ),
       Error::InvalidAdjacentNumber => f.write_str("InvalidAdjacentNumber"),
       Error::InvalidCharacterSet   => f.write_str("InvalidCharacterSet"  ),
@@ -38,6 +40,11 @@ impl fmt::Display for Error {
 #[inline]
 fn aescrypt_missing() -> &'static str {
   "aescrypt does not appear to be installed."
+}
+
+#[inline]
+fn failed_temp_dir() -> &'static str {
+  "Failed in creating a temp directory to work in."
 }
 
 #[inline]
@@ -79,6 +86,7 @@ impl StdError for Error {
   fn description(&self) -> &str {
     match *self {
       Error::AescryptMissing       => aescrypt_missing(),
+      Error::FailedTempDir         => failed_temp_dir(),
       Error::FileMissing           => file_missing(),
       Error::InvalidAdjacentNumber => invalid_adjacent_number(),
       Error::InvalidCharacterSet   => invalid_character_set(),
