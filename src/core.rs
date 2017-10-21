@@ -116,6 +116,22 @@ pub fn aescrypt_core_loop<'a>(
   Ok(())
 }
 
+fn any_file_contents(dir: &TempDir, omit: &str) -> bool {
+  let work_dir = fs::read_dir(&dir).expect("Failure reading tempdir's contents.");
+  let mut work_iter = work_dir.into_iter();
+  work_iter.any(|x| {
+    let entry = x.expect("Failure reading specific file in tempdir.");
+
+    if path::Path::new(&entry.path()) != path::Path::new(&omit) {
+      if fs::File::open(&entry.path()).
+        expect("Could not open file for validity check in tempdir.").
+        bytes().count() > 1 {
+        true
+      } else { false }
+    } else { false }
+  })
+}
+
 pub fn unzip_core_loop<'a>(
   max: usize,
   mut sequencer: Digits<'a>,
@@ -142,31 +158,21 @@ pub fn unzip_core_loop<'a>(
           let output = unzip_command(&value, &target);
 
           if output.status.success() {
-            let mut conspiracy = true;
-            if fs::read_dir(&dir).unwrap().count() > 1 {
-              for entry in fs::read_dir(&dir).
-                expect("Failure reading tempdir's contents.") {
-                let entry = entry.
-                  expect("Failure reading specific file in tempdir.");
+            if any_file_contents(&dir, &target) {
+              fs::read_dir(&dir).
+                expect("Failure reading tempdir's contents.").
+                into_iter().
+                for_each( |entry| {
+                let entry = entry.expect("Failure reading specific file in tempdir.");
+                let file_name = entry.file_name();
+                let dest_file = path::Path::new(&cwd).join(file_name);
 
-                if path::Path::new(&entry.path()) != path::Path::new(&target) {
-                  if fs::File::open(&entry.path()).
-                    expect("Could not open file for validity check in tempdir.").
-                    bytes().count() > 1 {
-                    conspiracy = false;
-                    let file_name = entry.file_name();
-                    let dest_file = path::Path::new(&cwd).join(file_name);
-
-                    fs::copy(entry.path(), dest_file).
-                      expect("Failure copying file from tempdir.");
-                  }
-                }
-              }
-              if !conspiracy {
-                let mut code_mutex = code.lock().unwrap();
-                code_mutex.push(Ok(()));
-                println!("Success!\nPassword is: {}", value);
-              }
+                fs::copy(entry.path(), dest_file).
+                  expect("Failure copying file from tempdir.");
+              });
+              let mut code_mutex = code.lock().unwrap();
+              code_mutex.push(Ok(()));
+              println!("Success!\nPassword is: {}", value);
             }
           }
         }
