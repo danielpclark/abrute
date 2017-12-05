@@ -18,6 +18,7 @@ pub enum Error {
   InvalidRange,
   InvalidStringLength,
   PasswordNotFound,
+  MalformedResumeKey,
   UnzipMissing,
 }
 
@@ -32,6 +33,7 @@ impl fmt::Display for Error {
       Error::InvalidRange          => f.write_str("InvalidRange"         ),
       Error::InvalidStringLength   => f.write_str("InvalidStringLength"  ),
       Error::PasswordNotFound      => f.write_str("PasswordNotFound"     ),
+      Error::MalformedResumeKey    => f.write_str("MalformedResumeKey"   ),
       Error::UnzipMissing          => f.write_str("UnzipMissing"         ),
     }
   }
@@ -78,6 +80,11 @@ fn password_not_found() -> &'static str {
 }
 
 #[inline]
+fn malformed_resume_key() -> &'static str {
+  "The input data was not formatted properly for creating ResumeKey."
+}
+
+#[inline]
 fn unzip_missing() -> &'static str {
   "unzip does not appear to be installed."
 }
@@ -93,6 +100,7 @@ impl StdError for Error {
       Error::InvalidRange          => invalid_range(),
       Error::InvalidStringLength   => invalid_string_length(),
       Error::PasswordNotFound      => password_not_found(),
+      Error::MalformedResumeKey    => malformed_resume_key(),
       Error::UnzipMissing          => unzip_missing(),
     }
   }

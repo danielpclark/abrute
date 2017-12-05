@@ -60,12 +60,12 @@ fn unzip_command(value: &str, target: &str) -> Output {
     unwrap()
 }
 
-fn progress_report<'a>(sequencer: &Digits<'a>) {
+fn progress_report<'a>(sequencer: &Digits) {
   print!("{}..", sequencer.to_s()); // Verbose
   io::stdout().flush().unwrap();
 }
 
-fn has_reached_end<'a>(sequencer: &Digits<'a>, max: usize) -> Result<(), Error> {
+fn has_reached_end<'a>(sequencer: &Digits, max: usize) -> Result<(), Error> {
   if sequencer.length() > max {
     return Err(Error::PasswordNotFound);
   }
@@ -75,7 +75,7 @@ fn has_reached_end<'a>(sequencer: &Digits<'a>, max: usize) -> Result<(), Error> 
 
 pub fn aescrypt_core_loop<'a>(
   max: usize,
-  mut sequencer: Digits<'a>,
+  mut sequencer: Digits,
   target: &str,
   adj: Option<&str>
   ) -> Result<(), Error> {
@@ -134,7 +134,7 @@ fn any_file_contents(dir: &TempDir, omit: &str) -> bool {
 
 pub fn unzip_core_loop<'a>(
   max: usize,
-  mut sequencer: Digits<'a>,
+  mut sequencer: Digits,
   target: &str,
   adj: Option<&str>
   ) -> Result<(), Error> {

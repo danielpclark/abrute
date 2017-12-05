@@ -5,10 +5,12 @@
 // http://opensource.org/licenses/MIT>, at your option. This file may not be
 // copied, modified, or distributed except according to those terms.
 
+#![feature(try_from)]
 extern crate digits;
 extern crate rayon;
 use digits::Digits;
 use std::io::{self, Write}; 
+mod resume;
 mod result;
 use result::Error;
 use std::error::Error as StdError;
@@ -93,7 +95,7 @@ USE OF THIS BINARY FALLS UNDER THE MIT LICENSE       (c) 2017").
   validate_start_string(&matches, max)?;
 
   let mapping = derive_character_base(matches.value_of("CHARACTERS").unwrap());
-  let mut sequencer = Digits::new(&mapping, matches.value_of("start").unwrap_or("").to_string());
+  let mut sequencer = Digits::new(mapping, matches.value_of("start").unwrap_or("").to_string());
   sequencer.zero_fill(min as usize);
 
   let target = matches.value_of("TARGET").unwrap_or("");
