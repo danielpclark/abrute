@@ -11,6 +11,7 @@ use self::array_tool::vec::Shift;
 extern crate digits;
 use self::digits::prelude::*;
 
+#[derive(Clone)]
 pub(crate) struct ResumeKeyDB {
   rkeys: Vec<ResumeKey>,
 }
@@ -36,6 +37,17 @@ impl ResumeKeyDB {
     }
     ResumeKeyDB { rkeys: db }
   }
+
+  fn update(&mut self, o: ResumeKey) {
+    let latest = o.latest(self.clone());
+    self.rkeys = self.
+      clone().
+      rkeys.
+      into_iter().
+      filter(|rk| rk.similarity(&latest) == Kind::Different).
+      collect();
+    self.rkeys.push(latest);
+  }
 }
 
 #[derive(Debug,Clone)]
@@ -52,6 +64,29 @@ impl PartialEq for ResumeKey {
   }
 }
 
+#[derive(Debug,Eq,PartialEq)]
+pub enum Kind {
+  Same,
+  Similar,
+  Different,
+}
+
+trait Similarity {
+  fn similarity(&self, other: &Self) -> Kind;
+}
+
+impl Similarity for ResumeKey {
+  fn similarity(&self, other: &ResumeKey) -> Kind {
+    if self.target    != other.target ||
+      self.characters != other.characters ||
+      self.adjacent   != other.adjacent {
+        return Kind::Different;
+    }
+
+    if self.start == other.start { Kind::Same } else { Kind::Similar }
+  }
+}
+
 impl ResumeKey {
   pub fn new(c: String,a: Option<String>,s: Digits,t: String) -> ResumeKey {
     ResumeKey {
@@ -63,12 +98,14 @@ impl ResumeKey {
   }
 
   pub(crate) fn latest(self, db: ResumeKeyDB) -> ResumeKey {
-    db.
+    let mut keys: Vec<ResumeKey> = db.
       rkeys.
       into_iter().
-      filter(|rk| rk.characters == self.characters).
-      filter(|rk| rk.target == self.target).
-      filter(|rk| rk.start >= self.start).
+      filter(|rk| rk.similarity(&self) != Kind::Different).
+      collect();
+    keys.push(self.clone());
+    keys.
+      into_iter().
       max_by(|ref a, ref b| a.start.partial_cmp(&b.start).unwrap()).
       unwrap_or(self)
   }
@@ -156,11 +193,19 @@ pub(crate) struct ResumeFile;
 
 impl ResumeFile {
   pub(crate) fn save(rk: ResumeKey) {
-    let file = OpenOptions::new().append(true).create(true).open(".abrute");
+    let mut db = ResumeFile::load();
+    db.update(rk);
+
+    let mut stringify = String::new();
+    for key in db.rkeys.iter() {
+      stringify.push_str(&format!("{}", key))
+    }
+
+    let file = OpenOptions::new().write(true).create(true).open(".abrute");
     assert!(file.is_ok(), "Failed to create or open file `.abrute` for resuming work!");
 
     if let Ok(mut f) = file {
-      f.write_all(&format!("{}", rk).as_bytes()).ok();
+      f.write_all(stringify.as_bytes()).ok();
       let _a = f.sync_data();
     }
 
@@ -214,7 +259,7 @@ fn it_backup_system_works() {
 
   let loaded_db = ResumeFile::load();
 
-  assert!(loaded_db.rkeys.contains(&ra), "`.abrute` backup did not contain first key backup!");
+  assert!(!loaded_db.rkeys.contains(&ra), "`.abrute` backup contains first key backup!");
   assert!(loaded_db.rkeys.contains(&rb), "`.abrute` backup did not contain second key backup!");
 
   ResumeFile::purge();
