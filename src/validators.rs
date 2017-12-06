@@ -36,7 +36,7 @@ pub fn validate_start_string(matches: &clap::ArgMatches, max: usize) -> Result<(
 }
 
 pub fn validate_and_prep_sequencer_adjacent<'a>(
-  sequencer: &mut Digits<'a>,
+  sequencer: &mut Digits,
   adjacent: Option<&str>
   ) -> Result<(), Error> {
 

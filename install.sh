@@ -13,7 +13,7 @@ else
     if [ "$Rust_answer" == "y" ];
     then
         # User agreed, proceed with installation
-        curl https://sh.rustup.rs -sSf | sh
+        curl https://sh.rustup.rs -sSf | sh -s -- --channel=nightly
     else
         # User refused, abort installation
         exit 1

@@ -5,10 +5,12 @@
 // http://opensource.org/licenses/MIT>, at your option. This file may not be
 // copied, modified, or distributed except according to those terms.
 
+#![feature(try_from)]
 extern crate digits;
 extern crate rayon;
 use digits::Digits;
 use std::io::{self, Write}; 
+mod resume;
 mod result;
 use result::Error;
 use std::error::Error as StdError;
@@ -93,7 +95,8 @@ USE OF THIS BINARY FALLS UNDER THE MIT LICENSE       (c) 2017").
   validate_start_string(&matches, max)?;
 
   let mapping = derive_character_base(matches.value_of("CHARACTERS").unwrap());
-  let mut sequencer = Digits::new(&mapping, matches.value_of("start").unwrap_or("").to_string());
+  let resume_key_chars = mapping_to_characters(&mapping);
+  let mut sequencer = Digits::new(mapping, matches.value_of("start").unwrap_or("").to_string());
   sequencer.zero_fill(min as usize);
 
   let target = matches.value_of("TARGET").unwrap_or("");
@@ -102,10 +105,26 @@ USE OF THIS BINARY FALLS UNDER THE MIT LICENSE       (c) 2017").
   validate_and_prep_sequencer_adjacent(&mut sequencer, adjacent)?;
   validate_file_exists(&target)?;
 
+  // Begin Resume Feature
+  let starting = sequencer.to_s();
+  use ::resume::{ResumeKey,ResumeFile};
+  let cli_key = ResumeKey::new(
+    resume_key_chars.clone(),
+    adjacent.map(str::to_string),
+    sequencer,
+    target.to_string(),
+  );
+  let latest = cli_key.latest(ResumeFile::load());
+  let sequencer = latest.start;
+  if starting != sequencer.to_s() {
+    println!("Resuming from last save point: {}", sequencer.to_s());
+  }
+  // End Resume Feature
+
   if matches.is_present("zip") {
-    unzip_core_loop(max, sequencer, target, adjacent)
+    unzip_core_loop(resume_key_chars, max, sequencer, target, adjacent)
   } else {
-    aescrypt_core_loop(max, sequencer, target, adjacent)
+    aescrypt_core_loop(resume_key_chars, max, sequencer, target, adjacent)
   }
 }
 

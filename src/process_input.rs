@@ -28,3 +28,10 @@ pub fn derive_character_base(characters: &str) -> BaseCustom<char> {
   BaseCustom::<char>::new(characters.chars().collect())
 }
 
+pub fn mapping_to_characters(m: &BaseCustom<char>) -> String {
+  let mut crs = String::new();
+  for x in 0..m.base as usize {
+    crs.push_str(&m.gen(x as u64)[..]);
+  }
+  crs
+}

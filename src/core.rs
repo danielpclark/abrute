@@ -13,6 +13,7 @@ use rayon::prelude::*;
 use super::result::Error;
 extern crate num_cpus;
 extern crate tempdir;
+use resume::{ResumeKey,ResumeFile};
 use self::tempdir::TempDir;
 use std::{fs,path,env};
 
@@ -60,12 +61,12 @@ fn unzip_command(value: &str, target: &str) -> Output {
     unwrap()
 }
 
-fn progress_report<'a>(sequencer: &Digits<'a>) {
+fn progress_report<'a>(sequencer: &Digits) {
   print!("{}..", sequencer.to_s()); // Verbose
   io::stdout().flush().unwrap();
 }
 
-fn has_reached_end<'a>(sequencer: &Digits<'a>, max: usize) -> Result<(), Error> {
+fn has_reached_end<'a>(sequencer: &Digits, max: usize) -> Result<(), Error> {
   if sequencer.length() > max {
     return Err(Error::PasswordNotFound);
   }
@@ -74,12 +75,12 @@ fn has_reached_end<'a>(sequencer: &Digits<'a>, max: usize) -> Result<(), Error> 
 }
 
 pub fn aescrypt_core_loop<'a>(
+  characters: String,
   max: usize,
-  mut sequencer: Digits<'a>,
+  mut sequencer: Digits,
   target: &str,
   adj: Option<&str>
   ) -> Result<(), Error> {
-
   loop {
     has_reached_end(&sequencer, max)?;
     progress_report(&sequencer);
@@ -111,6 +112,15 @@ pub fn aescrypt_core_loop<'a>(
 
       break;
     }
+
+    ResumeFile::save(
+      ResumeKey::new(
+        characters.clone(),
+        adj.map(str::to_string),
+        sequencer.clone(),
+        target.to_string()
+      )
+    );
   }
 
   Ok(())
@@ -133,12 +143,12 @@ fn any_file_contents(dir: &TempDir, omit: &str) -> bool {
 }
 
 pub fn unzip_core_loop<'a>(
+  characters: String,
   max: usize,
-  mut sequencer: Digits<'a>,
+  mut sequencer: Digits,
   target: &str,
   adj: Option<&str>
   ) -> Result<(), Error> {
-
   if let Ok(dir) = TempDir::new("abrute") {
     let cwd = env::current_dir().unwrap();
     let working = path::Path::new(&dir.path().as_os_str()).join(&target);
@@ -182,6 +192,15 @@ pub fn unzip_core_loop<'a>(
       if !code.is_empty() {
         return code.pop().unwrap();
       }
+
+      ResumeFile::save(
+        ResumeKey::new(
+          characters.clone(),
+          adj.map(str::to_string),
+          sequencer.clone(),
+          target.to_string()
+        )
+      );
     }
   } else {
     return Err(Error::FailedTempDir);
