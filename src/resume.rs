@@ -10,17 +10,12 @@ extern crate array_tool;
 use self::array_tool::vec::Shift;
 extern crate digits;
 use self::digits::prelude::*;
-use std::cmp::Ordering;
 
-struct ResumeKeyDB {
+pub(crate) struct ResumeKeyDB {
   rkeys: Vec<ResumeKey>,
 }
 
 impl ResumeKeyDB {
-  fn first(&self) -> Option<&ResumeKey> {
-    self.rkeys.iter().next()
-  }
-
   fn get(f: String) -> ResumeKeyDB {
     let file = File::open(f);
     assert!(file.is_ok());
@@ -43,23 +38,38 @@ impl ResumeKeyDB {
   }
 }
 
-#[derive(Debug,PartialEq)]
-struct ResumeKey {
+#[derive(Debug,Clone)]
+pub(crate) struct ResumeKey {
   characters: String,
-  adjacent: Option<u8>,
-  start: Digits,
+  adjacent: Option<String>,
+  pub(crate) start: Digits,
   target: String,
 }
 
+impl PartialEq for ResumeKey {
+  fn eq(&self, other: &ResumeKey) -> bool {
+    self.start == other.start
+  }
+}
+
 impl ResumeKey {
-  fn latest(self, db: ResumeKeyDB) -> ResumeKey {
+  pub fn new(c: String,a: Option<String>,s: Digits,t: String) -> ResumeKey {
+    ResumeKey {
+      characters: c,
+      adjacent: a,
+      start: s,
+      target: t,
+    }
+  }
+
+  pub(crate) fn latest(self, db: ResumeKeyDB) -> ResumeKey {
     db.
       rkeys.
       into_iter().
       filter(|rk| rk.characters == self.characters).
       filter(|rk| rk.target == self.target).
       filter(|rk| rk.start >= self.start).
-      max_by(|_,_| Ordering::Greater).
+      max_by(|ref a, ref b| a.start.partial_cmp(&b.start).unwrap()).
       unwrap_or(self)
   }
 }
@@ -89,7 +99,7 @@ impl TryFrom<String> for ResumeKey {
     let c = values.shift().ok_or_else(|| return MalformedResumeKey)?;
     let a = values.shift().ok_or_else(|| return MalformedResumeKey).unwrap();
     let a = match a.parse::<u8>() {
-      Ok(v) => Some(v),
+      Ok(_) => Some(a),
       _ => None,
     };
     Ok(ResumeKey {
@@ -106,11 +116,11 @@ impl TryFrom<String> for ResumeKey {
 
 impl Display for ResumeKey {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-    let a = if self.adjacent.is_some() {
-      format!("{}", self.adjacent.unwrap())
-    } else {
-      "None".to_string()
-    };
+    let a: String;
+    match self.adjacent {
+      Some(ref v) => a = v.clone(),
+      _ => a = "None".to_string(),
+    }
     write!(f,
            "{}\n{}\n{}\n{}\n\n",
            self.characters,
@@ -125,7 +135,7 @@ impl Display for ResumeKey {
 fn input_and_output_for_resume_works() {
   let r = ResumeKey {
     characters: String::from("asdf"),
-    adjacent: Some(1),
+    adjacent: Some("1".to_string()),
     start: Digits::new({BaseCustom::<char>::new("asdf".chars().collect())}, String::from("aaaa")),
     target: String::from("thing.aes")
   };
@@ -134,7 +144,7 @@ fn input_and_output_for_resume_works() {
   file.write_all(&format!("{}", r).as_bytes()).ok();
 
   let keys = ResumeKeyDB::get(".example.res".to_string());
-  let k = keys.first();
+  let k = keys.rkeys.iter().next();
   assert_eq!(Some(&r), k); 
 
   let _a = fs::remove_file(".example.res");
@@ -142,29 +152,29 @@ fn input_and_output_for_resume_works() {
 }
 
 #[derive(Debug)]
-struct ResumeFile;
+pub(crate) struct ResumeFile;
 
 impl ResumeFile {
-  pub(crate) fn save(&self, rk: &ResumeKey) {
+  pub(crate) fn save(rk: ResumeKey) {
     let file = OpenOptions::new().append(true).create(true).open(".abrute");
     assert!(file.is_ok(), "Failed to create or open file `.abrute` for resuming work!");
 
     if let Ok(mut f) = file {
-      f.write_all(&format!("{}\n", rk).as_bytes()).ok();
+      f.write_all(&format!("{}", rk).as_bytes()).ok();
       let _a = f.sync_data();
     }
 
-    self.backup()
+    ResumeFile::backup()
   }
 
-  fn backup(&self) {
+  fn backup() {
     let file = ".abrute";
     let backup = ".abrute.bak";
     fs::copy(file, backup).
       expect("Failed to backup `.abrute` to `.abrute.bak`!");
   }
 
-  pub(crate) fn load(&self) -> ResumeKeyDB {
+  pub(crate) fn load() -> ResumeKeyDB {
     let file = ".abrute";
     if Path::new(file).exists() {
       let db = ResumeKeyDB::get(file.to_owned());
@@ -180,7 +190,8 @@ impl ResumeFile {
     return ResumeKeyDB { rkeys: vec![] };
   }
 
-  pub(crate) fn purge(&self) {
+  #[allow(dead_code)]
+  pub(crate) fn purge() {
     let _a = fs::remove_file(".abrute");
     let _b = fs::remove_file(".abrute.bak");
   }
@@ -188,8 +199,6 @@ impl ResumeFile {
 
 #[test]
 fn it_backup_system_works() {
-  let db_backup = ResumeFile {};
-
   let bc = BaseCustom::<char>::new("asdf".chars().collect());
   let aa = Digits::new(bc.clone(), "aaaa".to_string());
   let ab = Digits::new(bc.clone(), "ssss".to_string());
@@ -197,18 +206,18 @@ fn it_backup_system_works() {
   let ra = ResumeKey { characters: "asdf".to_string(), adjacent: None, start: aa, target: "thing".to_string() };
   let rb = ResumeKey { characters: "asdf".to_string(), adjacent: None, start: ab, target: "thing".to_string() };
 
-  db_backup.save(&ra);
-  db_backup.save(&rb);
+  ResumeFile::save(ra.clone());
+  ResumeFile::save(rb.clone());
 
   assert!(Path::new(".abrute").exists(), "`.abrute` not found!");
   assert!(Path::new(".abrute.bak").exists(), "`.abrute.bak` not found!");
 
-  let loaded_db = db_backup.load();
+  let loaded_db = ResumeFile::load();
 
   assert!(loaded_db.rkeys.contains(&ra), "`.abrute` backup did not contain first key backup!");
   assert!(loaded_db.rkeys.contains(&rb), "`.abrute` backup did not contain second key backup!");
 
-  db_backup.purge();
+  ResumeFile::purge();
 
   assert!(!Path::new(".abrute").exists(), "`.abrute` cleanup failed!");
   assert!(!Path::new(".abrute.bak").exists(), "`.abrute.bak` cleanup failed!");
