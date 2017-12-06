@@ -235,7 +235,6 @@ impl ResumeFile {
     return ResumeKeyDB { rkeys: vec![] };
   }
 
-  #[allow(dead_code)]
   pub(crate) fn purge() {
     let _a = fs::remove_file(".abrute");
     let _b = fs::remove_file(".abrute.bak");

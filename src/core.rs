@@ -109,7 +109,7 @@ pub fn aescrypt_core_loop<'a>(
       // times would be very slow and difficult to implement in a threaded way.
       
       aes_command(code.first().unwrap(), target);
-
+      ResumeFile::purge();
       break;
     }
 
@@ -190,6 +190,7 @@ pub fn unzip_core_loop<'a>(
 
       let mut code = code.lock().unwrap();
       if !code.is_empty() {
+        ResumeFile::purge();
         return code.pop().unwrap();
       }
 
