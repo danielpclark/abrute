@@ -145,7 +145,7 @@ fn input_and_output_for_resume_works() {
 
   let keys = ResumeKeyDB::get(".example.res".to_string());
   let k = keys.rkeys.iter().next();
-  assert_eq!(Some(&r), k); 
+  assert_eq!(Some(&r), k);
 
   let _a = fs::remove_file(".example.res");
   assert!(!Path::new(".example.res").exists(), "`.example.res` cleanup failed!");

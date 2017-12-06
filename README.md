@@ -10,6 +10,8 @@ a secondary system.
 
 ## Installation
 
+_abrute needs the nightly build of Rust for the TryFrom trait._
+
 To use the install script you need to have the following commands available on your
 system `curl wget unzip sudo cc` and possibly other build essentials for C.
 
@@ -58,7 +60,7 @@ cd ../.. && rm -rf aescrypt-3.13
 Next you need to have [Rust installed](https://www.rust-lang.org/en-US/install.html).  
 
 ```bash
-curl https://sh.rustup.rs -sSf | sh
+curl https://sh.rustup.rs -sSf | sh -s -- --channel=nightly
 ```
 
 Then you can get and compile abrute.

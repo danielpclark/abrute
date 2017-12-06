@@ -107,7 +107,7 @@ USE OF THIS BINARY FALLS UNDER THE MIT LICENSE       (c) 2017").
 
   // Begin Resume Feature
   let starting = sequencer.to_s();
-  use ::resume::{ResumeKey,ResumeFile}; 
+  use ::resume::{ResumeKey,ResumeFile};
   let cli_key = ResumeKey::new(
     resume_key_chars.clone(),
     adjacent.map(str::to_string),
