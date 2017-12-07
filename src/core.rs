@@ -16,6 +16,11 @@ extern crate tempdir;
 use resume::{ResumeKey,ResumeFile};
 use self::tempdir::TempDir;
 use std::{fs,path,env};
+use std::time::{Duration, Instant};
+
+fn has_five_minutes_passed(t: Instant) -> bool {
+  Instant::now().duration_since(t) > Duration::new(300,0)
+}
 
 fn chunk_sequence(d: &mut Digits, adj: Option<&str>) -> Vec<String> {
   let qty: usize = num_cpus::get() * 32;
@@ -81,6 +86,7 @@ pub fn aescrypt_core_loop<'a>(
   target: &str,
   adj: Option<&str>
   ) -> Result<(), Error> {
+  let mut time_keeper = Instant::now();
   loop {
     has_reached_end(&sequencer, max)?;
     progress_report(&sequencer);
@@ -113,14 +119,18 @@ pub fn aescrypt_core_loop<'a>(
       break;
     }
 
-    ResumeFile::save(
-      ResumeKey::new(
-        characters.clone(),
-        adj.map(str::to_string),
-        sequencer.clone(),
-        target.to_string()
-      )
-    );
+    if has_five_minutes_passed(time_keeper) {
+      ResumeFile::save(
+        ResumeKey::new(
+          characters.clone(),
+          adj.map(str::to_string),
+          sequencer.clone(),
+          target.to_string()
+        )
+      );
+
+      time_keeper = Instant::now();
+    }
   }
 
   Ok(())
@@ -149,6 +159,7 @@ pub fn unzip_core_loop<'a>(
   target: &str,
   adj: Option<&str>
   ) -> Result<(), Error> {
+  let mut time_keeper = Instant::now();
   if let Ok(dir) = TempDir::new("abrute") {
     let cwd = env::current_dir().unwrap();
     let working = path::Path::new(&dir.path().as_os_str()).join(&target);
@@ -194,14 +205,19 @@ pub fn unzip_core_loop<'a>(
         return code.pop().unwrap();
       }
 
-      ResumeFile::save(
-        ResumeKey::new(
-          characters.clone(),
-          adj.map(str::to_string),
-          sequencer.clone(),
-          target.to_string()
-        )
-      );
+
+      if has_five_minutes_passed(time_keeper) {
+        ResumeFile::save(
+          ResumeKey::new(
+            characters.clone(),
+            adj.map(str::to_string),
+            sequencer.clone(),
+            target.to_string()
+          )
+        );
+
+        time_keeper = Instant::now();
+      }
     }
   } else {
     return Err(Error::FailedTempDir);
