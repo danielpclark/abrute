@@ -17,19 +17,20 @@ use resume::{ResumeKey,ResumeFile};
 use self::tempdir::TempDir;
 use std::{fs,path,env};
 use std::time::{Duration, Instant};
+use ::WorkLoad;
 
 fn has_five_minutes_passed(t: Instant) -> bool {
   Instant::now().duration_since(t) > Duration::new(300,0)
 }
 
-fn chunk_sequence(d: &mut Digits, adj: Option<&str>) -> Vec<String> {
+fn chunk_sequence(d: &mut Digits, adj: Option<String>) -> Vec<String> {
   let qty: usize = num_cpus::get() * 32;
   let mut counter = 0;
   let mut result = vec![];
   loop {
     if counter >= qty { break; }
 
-    if let Some(a) = adj { 
+    if let Some(a) = adj.clone() { 
       if d.base() > 3 {
         result.push(d.step_non_adjacent(a.parse::<u8>().unwrap() as usize).to_s());
         counter += 1;
@@ -79,19 +80,14 @@ fn has_reached_end<'a>(sequencer: &Digits, max: usize) -> Result<(), Error> {
   Ok(())
 }
 
-pub fn aescrypt_core_loop<'a>(
-  characters: String,
-  max: usize,
-  mut sequencer: Digits,
-  target: &str,
-  adj: Option<&str>
-  ) -> Result<(), Error> {
+pub fn aescrypt_core_loop<'a>(work_load: WorkLoad) -> Result<(), Error> {
+  let WorkLoad(characters, max, mut sequencer, target, adj) = work_load;
   let mut time_keeper = Instant::now();
   loop {
     has_reached_end(&sequencer, max)?;
     progress_report(&sequencer);
 
-    let chunk = chunk_sequence(&mut sequencer, adj);
+    let chunk = chunk_sequence(&mut sequencer, adj.clone());
     let code: Mutex<Vec<String>> = Mutex::new(vec![]);
 
     chunk.par_iter().for_each(|ref value|
@@ -114,7 +110,7 @@ pub fn aescrypt_core_loop<'a>(
       // every attempt in a temp dir or mem dir and copying that much data that many
       // times would be very slow and difficult to implement in a threaded way.
       
-      aes_command(code.first().unwrap(), target);
+      aes_command(code.first().unwrap(), &target[..]);
       ResumeFile::purge();
       break;
     }
@@ -123,7 +119,7 @@ pub fn aescrypt_core_loop<'a>(
       ResumeFile::save(
         ResumeKey::new(
           characters.clone(),
-          adj.map(str::to_string),
+          adj.clone(),
           sequencer.clone(),
           target.to_string()
         )
@@ -152,13 +148,8 @@ fn any_file_contents(dir: &TempDir, omit: &str) -> bool {
   })
 }
 
-pub fn unzip_core_loop<'a>(
-  characters: String,
-  max: usize,
-  mut sequencer: Digits,
-  target: &str,
-  adj: Option<&str>
-  ) -> Result<(), Error> {
+pub fn unzip_core_loop<'a>(work_load: WorkLoad) -> Result<(), Error> {
+  let WorkLoad(characters, max, mut sequencer, target, adj) = work_load;
   let mut time_keeper = Instant::now();
   if let Ok(dir) = TempDir::new("abrute") {
     let cwd = env::current_dir().unwrap();
@@ -171,7 +162,7 @@ pub fn unzip_core_loop<'a>(
       has_reached_end(&sequencer, max)?;
       progress_report(&sequencer);
 
-      let chunk = chunk_sequence(&mut sequencer, adj);
+      let chunk = chunk_sequence(&mut sequencer, adj.clone());
       let code: Mutex<Vec<Result<(), Error>>> = Mutex::new(vec![]);
 
       chunk.par_iter().for_each(|ref value|
@@ -210,7 +201,7 @@ pub fn unzip_core_loop<'a>(
         ResumeFile::save(
           ResumeKey::new(
             characters.clone(),
-            adj.map(str::to_string),
+            adj.clone(),
             sequencer.clone(),
             target.to_string()
           )

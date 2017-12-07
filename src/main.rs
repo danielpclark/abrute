@@ -24,6 +24,14 @@ use core::*;
 extern crate clap;
 use clap::{Arg, App};
 
+pub struct WorkLoad(
+  pub String,        // characters: String,
+  pub usize,         // max: usize,
+  pub Digits,        // mut sequencer: Digits,
+  pub String,        // target: &str,
+  pub Option<String> // adj: Option<&str>
+);
+
 fn run_app() -> Result<(), Error> {
   let matches = App::new("abrute - AES Brute Force File Decryptor").
     version(&format!("v{}", crate_version!())[..]).
@@ -120,12 +128,20 @@ USE OF THIS BINARY FALLS UNDER THE MIT LICENSE       (c) 2017").
     println!("Resuming from last save point: {}", sequencer.to_s());
   }
   // End Resume Feature
+  
+  let work_load = WorkLoad(
+    resume_key_chars,
+    max,
+    sequencer,
+    target.to_string(),
+    adjacent.map(str::to_string)
+  );
 
   if matches.is_present("zip") {
-    unzip_core_loop(resume_key_chars, max, sequencer, target, adjacent)
-  } else {
-    aescrypt_core_loop(resume_key_chars, max, sequencer, target, adjacent)
+    return unzip_core_loop(work_load);
   }
+
+  aescrypt_core_loop(work_load)
 }
 
 fn main() {
