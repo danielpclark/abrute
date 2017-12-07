@@ -23,7 +23,7 @@ fn has_five_minutes_passed(t: Instant) -> bool {
   Instant::now().duration_since(t) > Duration::new(300,0)
 }
 
-fn chunk_sequence(d: &mut Digits, adj: Option<String>, chunk: usize) -> Vec<String> {
+fn chunk_sequence(d: &mut Digits, adj: Option<String>, chunk: usize, step: Option<usize>) -> Vec<String> {
   let qty: usize = num_cpus::get() * chunk;
   let mut counter = 0;
   let mut result = vec![];
@@ -32,13 +32,17 @@ fn chunk_sequence(d: &mut Digits, adj: Option<String>, chunk: usize) -> Vec<Stri
 
     if let Some(a) = adj.clone() { 
       if d.base() > 3 {
-        result.push(d.step_non_adjacent(a.parse::<u8>().unwrap() as usize).to_s());
+        for _ in 0..step.unwrap_or(1) {
+          d.step_non_adjacent(a.parse::<u8>().unwrap() as usize);
+        }
+        result.push(d.to_s());
         counter += 1;
         continue;
       }
     }
 
-    result.push(d.succ().to_s());
+    let step_size = d.gen(step.unwrap_or(1) as u64);
+    result.push(d.mut_add(step_size).to_s());
     counter += 1;
   }
   result
@@ -81,7 +85,7 @@ fn has_reached_end<'a>(sequencer: &Digits, max: usize) -> Result<(), Error> {
 }
 
 pub fn aescrypt_core_loop<'a>(work_load: WorkLoad) -> Result<(), Error> {
-  let WorkLoad(characters, max, mut sequencer, target, adj, chunk_size) = work_load;
+  let WorkLoad(characters, max, mut sequencer, target, adj, chunk_size, cluster_step) = work_load;
   let mut time_keeper = Instant::now();
   loop {
     has_reached_end(&sequencer, max)?;
@@ -90,7 +94,8 @@ pub fn aescrypt_core_loop<'a>(work_load: WorkLoad) -> Result<(), Error> {
     let chunk = chunk_sequence(
       &mut sequencer,
       adj.clone(),
-      chunk_size.clone().map_or(32, |s| s.parse::<usize>().ok().unwrap())
+      chunk_size.clone().map_or(32, |s| s.parse::<usize>().ok().unwrap()),
+      cluster_step
     );
     let code: Mutex<Vec<String>> = Mutex::new(vec![]);
 
@@ -153,7 +158,7 @@ fn any_file_contents(dir: &TempDir, omit: &str) -> bool {
 }
 
 pub fn unzip_core_loop<'a>(work_load: WorkLoad) -> Result<(), Error> {
-  let WorkLoad(characters, max, mut sequencer, target, adj, chunk_size) = work_load;
+  let WorkLoad(characters, max, mut sequencer, target, adj, chunk_size, cluster_step) = work_load;
   let mut time_keeper = Instant::now();
   if let Ok(dir) = TempDir::new("abrute") {
     let cwd = env::current_dir().unwrap();
@@ -169,7 +174,8 @@ pub fn unzip_core_loop<'a>(work_load: WorkLoad) -> Result<(), Error> {
       let chunk = chunk_sequence(
         &mut sequencer,
         adj.clone(),
-        chunk_size.clone().map_or(32, |s| s.parse::<usize>().ok().unwrap())
+        chunk_size.clone().map_or(32, |s| s.parse::<usize>().ok().unwrap()),
+        cluster_step
       );
       let code: Mutex<Vec<Result<(), Error>>> = Mutex::new(vec![]);
 

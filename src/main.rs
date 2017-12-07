@@ -30,7 +30,8 @@ pub struct WorkLoad(
   pub Digits,         // mut sequencer: Digits,
   pub String,         // target: String,
   pub Option<String>, // adj: Option<String>
-  pub Option<String>  // chunk: Option<String>
+  pub Option<String>, // chunk: Option<String>
+  pub Option<usize>   // cluster_step: Option<(usize,usize)>
 );
 
 fn run_app() -> Result<(), Error> {
@@ -67,6 +68,10 @@ fn run_app() -> Result<(), Error> {
           long("chunk").
           takes_value(true)
     ).
+    arg(Arg::with_name("cluster").
+          long("cluster").
+          takes_value(true)
+    ).
     arg(Arg::with_name("TARGET").
           required(true).
           last(true)
@@ -91,6 +96,9 @@ fn run_app() -> Result<(), Error> {
    -z, --zip       Use `unzip` decryption instead of `aescrypt`.
    -c, --chunk     Workload chunk size per core before status update.
                    Defaults to 32.
+   --cluster       Takes an offset and cluster size such as 1:4 for the
+                   first system in a cluster of 4.  Helps different systems
+                   split the workload without trying the same passwords.
    <TARGET>        Target file to decrypt.  The target must be preceeded
                    by a double dash: -- target.aes
    -h, --help      Prints help information.
@@ -126,6 +134,14 @@ USE OF THIS BINARY FALLS UNDER THE MIT LICENSE       (c) 2017").
     validate_chunk_input(&chunk.unwrap()[..])?;
   }
 
+  let mut cluster_step: Option<usize> = None;
+  if matches.is_present("cluster") {
+    let (offset, step) = derive_cluster(matches.value_of("cluster").unwrap())?;
+    cluster_step = Some(step);
+    let additive = sequencer.gen(offset as u64).pred_till_zero();
+    sequencer.mut_add(additive);
+  }
+
   // Begin Resume Feature
   let starting = sequencer.to_s();
   use ::resume::{ResumeKey,ResumeFile};
@@ -148,7 +164,8 @@ USE OF THIS BINARY FALLS UNDER THE MIT LICENSE       (c) 2017").
     sequencer,
     target.to_string(),
     adjacent.map(str::to_string),
-    chunk.map(str::to_string)
+    chunk.map(str::to_string),
+    cluster_step
   );
 
   if matches.is_present("zip") {

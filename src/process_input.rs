@@ -24,6 +24,19 @@ pub fn derive_min_max(range: &str) -> Result<(usize, usize), Error> {
   Ok((min, get_max()))
 }
 
+pub fn derive_cluster(range: &str) -> Result<(usize, usize), Error> {
+  let rvals = range.split(':').collect::<Vec<&str>>();
+  if rvals.len() != 2 { return Err(Error::InvalidRange); }
+  for item in &rvals { if item.parse::<usize>().is_err() { return Err(Error::InvalidRange); } }
+  let mut rivals = rvals.iter();
+  let offset = rivals.next().unwrap();
+  let cluster_size = rivals.next().unwrap();
+  let offset = offset.parse::<usize>().unwrap();
+  let cluster_size = cluster_size.parse::<usize>().unwrap();
+  if offset > cluster_size || offset == 0 { return Err(Error::InvalidRange); }
+  Ok((offset, cluster_size))
+}
+
 pub fn derive_character_base(characters: &str) -> BaseCustom<char> {
   BaseCustom::<char>::new(characters.chars().collect())
 }

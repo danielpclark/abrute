@@ -88,6 +88,9 @@ sudo cp target/release/abrute /usr/bin/
    -z, --zip       Use `unzip` decryption instead of `aescrypt`.
    -c, --chunk     Workload chunk size per core before status update.
                    Defaults to 32.
+   --cluster       Takes an offset and cluster size such as 1:4 for the
+                   first system in a cluster of 4.  Helps different systems
+                   split the workload without trying the same passwords.
    <TARGET>        Target file to decrypt.  The target must be preceeded
                    by a double dash: -- target.aes
    -h, --help      Prints help information.
