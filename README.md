@@ -86,6 +86,8 @@ sudo cp target/release/abrute /usr/bin/
                    in the attempts.
    -s, --start     Starting character sequence to begin with.
    -z, --zip       Use `unzip` decryption instead of `aescrypt`.
+   -c, --chunk     Workload chunk size per core before status update.
+                   Defaults to 32.
    <TARGET>        Target file to decrypt.  The target must be preceeded
                    by a double dash: -- target.aes
    -h, --help      Prints help information.

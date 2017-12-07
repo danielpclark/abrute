@@ -23,8 +23,8 @@ fn has_five_minutes_passed(t: Instant) -> bool {
   Instant::now().duration_since(t) > Duration::new(300,0)
 }
 
-fn chunk_sequence(d: &mut Digits, adj: Option<String>) -> Vec<String> {
-  let qty: usize = num_cpus::get() * 32;
+fn chunk_sequence(d: &mut Digits, adj: Option<String>, chunk: usize) -> Vec<String> {
+  let qty: usize = num_cpus::get() * chunk;
   let mut counter = 0;
   let mut result = vec![];
   loop {
@@ -81,13 +81,17 @@ fn has_reached_end<'a>(sequencer: &Digits, max: usize) -> Result<(), Error> {
 }
 
 pub fn aescrypt_core_loop<'a>(work_load: WorkLoad) -> Result<(), Error> {
-  let WorkLoad(characters, max, mut sequencer, target, adj) = work_load;
+  let WorkLoad(characters, max, mut sequencer, target, adj, chunk_size) = work_load;
   let mut time_keeper = Instant::now();
   loop {
     has_reached_end(&sequencer, max)?;
     progress_report(&sequencer);
 
-    let chunk = chunk_sequence(&mut sequencer, adj.clone());
+    let chunk = chunk_sequence(
+      &mut sequencer,
+      adj.clone(),
+      chunk_size.clone().map_or(32, |s| s.parse::<usize>().ok().unwrap())
+    );
     let code: Mutex<Vec<String>> = Mutex::new(vec![]);
 
     chunk.par_iter().for_each(|ref value|
@@ -149,7 +153,7 @@ fn any_file_contents(dir: &TempDir, omit: &str) -> bool {
 }
 
 pub fn unzip_core_loop<'a>(work_load: WorkLoad) -> Result<(), Error> {
-  let WorkLoad(characters, max, mut sequencer, target, adj) = work_load;
+  let WorkLoad(characters, max, mut sequencer, target, adj, chunk_size) = work_load;
   let mut time_keeper = Instant::now();
   if let Ok(dir) = TempDir::new("abrute") {
     let cwd = env::current_dir().unwrap();
@@ -162,7 +166,11 @@ pub fn unzip_core_loop<'a>(work_load: WorkLoad) -> Result<(), Error> {
       has_reached_end(&sequencer, max)?;
       progress_report(&sequencer);
 
-      let chunk = chunk_sequence(&mut sequencer, adj.clone());
+      let chunk = chunk_sequence(
+        &mut sequencer,
+        adj.clone(),
+        chunk_size.clone().map_or(32, |s| s.parse::<usize>().ok().unwrap())
+      );
       let code: Mutex<Vec<Result<(), Error>>> = Mutex::new(vec![]);
 
       chunk.par_iter().for_each(|ref value|

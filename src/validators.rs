@@ -16,6 +16,11 @@ pub fn validate_adjacent_input(v: String) -> Result<(), Error> {
   Err(Error::InvalidAdjacentNumber)
 }
 
+pub fn validate_chunk_input(v: &str) -> Result<(), Error> {
+  if v.parse::<usize>().is_ok() { return Ok(()); } 
+  Err(Error::InvalidChunkNumber)
+}
+
 pub fn validate_start_string(matches: &clap::ArgMatches, max: usize) -> Result<(), Error> {
   if let Some(s) = matches.value_of("start") {
     if s.len() > max { return Err(Error::InvalidStringLength); } 

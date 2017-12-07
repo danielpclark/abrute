@@ -15,6 +15,7 @@ pub enum Error {
   FileMissing,
   InvalidAdjacentNumber,
   InvalidCharacterSet,
+  InvalidChunkNumber,
   InvalidRange,
   InvalidStringLength,
   PasswordNotFound,
@@ -30,6 +31,7 @@ impl fmt::Display for Error {
       Error::FileMissing           => f.write_str("FileMissing"          ),
       Error::InvalidAdjacentNumber => f.write_str("InvalidAdjacentNumber"),
       Error::InvalidCharacterSet   => f.write_str("InvalidCharacterSet"  ),
+      Error::InvalidChunkNumber    => f.write_str("InvalidChunkNumber"),
       Error::InvalidRange          => f.write_str("InvalidRange"         ),
       Error::InvalidStringLength   => f.write_str("InvalidStringLength"  ),
       Error::PasswordNotFound      => f.write_str("PasswordNotFound"     ),
@@ -65,6 +67,11 @@ fn invalid_character_set() -> &'static str {
 }
 
 #[inline]
+fn invalid_chunk_number() -> &'static str {
+  "Invalid number for chunk input."
+}
+
+#[inline]
 fn invalid_range() -> &'static str {
   "Invalid range input given."
 }
@@ -97,6 +104,7 @@ impl StdError for Error {
       Error::FileMissing           => file_missing(),
       Error::InvalidAdjacentNumber => invalid_adjacent_number(),
       Error::InvalidCharacterSet   => invalid_character_set(),
+      Error::InvalidChunkNumber    => invalid_chunk_number(),
       Error::InvalidRange          => invalid_range(),
       Error::InvalidStringLength   => invalid_string_length(),
       Error::PasswordNotFound      => password_not_found(),

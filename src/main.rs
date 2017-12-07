@@ -25,11 +25,12 @@ extern crate clap;
 use clap::{Arg, App};
 
 pub struct WorkLoad(
-  pub String,        // characters: String,
-  pub usize,         // max: usize,
-  pub Digits,        // mut sequencer: Digits,
-  pub String,        // target: &str,
-  pub Option<String> // adj: Option<&str>
+  pub String,         // characters: String,
+  pub usize,          // max: usize,
+  pub Digits,         // mut sequencer: Digits,
+  pub String,         // target: String,
+  pub Option<String>, // adj: Option<String>
+  pub Option<String>  // chunk: Option<String>
 );
 
 fn run_app() -> Result<(), Error> {
@@ -61,6 +62,11 @@ fn run_app() -> Result<(), Error> {
           long("zip").
           takes_value(false)
     ).
+    arg(Arg::with_name("chunk").
+          short("c").
+          long("chunk").
+          takes_value(true)
+    ).
     arg(Arg::with_name("TARGET").
           required(true).
           last(true)
@@ -83,6 +89,8 @@ fn run_app() -> Result<(), Error> {
                    in the attempts.
    -s, --start     Starting character sequence to begin with.
    -z, --zip       Use `unzip` decryption instead of `aescrypt`.
+   -c, --chunk     Workload chunk size per core before status update.
+                   Defaults to 32.
    <TARGET>        Target file to decrypt.  The target must be preceeded
                    by a double dash: -- target.aes
    -h, --help      Prints help information.
@@ -113,6 +121,11 @@ USE OF THIS BINARY FALLS UNDER THE MIT LICENSE       (c) 2017").
   validate_and_prep_sequencer_adjacent(&mut sequencer, adjacent)?;
   validate_file_exists(&target)?;
 
+  let chunk = matches.value_of("chunk");
+  if matches.is_present("chunk") {
+    validate_chunk_input(&chunk.unwrap()[..])?;
+  }
+
   // Begin Resume Feature
   let starting = sequencer.to_s();
   use ::resume::{ResumeKey,ResumeFile};
@@ -134,7 +147,8 @@ USE OF THIS BINARY FALLS UNDER THE MIT LICENSE       (c) 2017").
     max,
     sequencer,
     target.to_string(),
-    adjacent.map(str::to_string)
+    adjacent.map(str::to_string),
+    chunk.map(str::to_string)
   );
 
   if matches.is_present("zip") {
