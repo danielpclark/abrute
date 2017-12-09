@@ -10,4 +10,4 @@ before_install:
 - make && sudo make install
 - cd ../.. && rm -rf aescrypt-3.13
 - export PATH=$PATH:$PWD/bin/
-script: cargo test && cargo build && shpec test/*.test
+script: cargo +nightly test && cargo +nightly build && shpec test/*.test
