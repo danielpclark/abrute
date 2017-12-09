@@ -40,7 +40,7 @@ fi
 if [ -d src ] && [ -d .git ];
 then
     # The source files are already there. We can build and install Abrute.
-    cargo build --release
+    cargo +nightly build --release
     sudo cp target/release/abrute /usr/bin
 else
     # Downloading the source files
@@ -49,7 +49,7 @@ else
     cd abrute-master
     
     # Building and installing
-    bash -lc "cargo build --release"
+    bash -lc "cargo +nightly build --release"
     sudo cp target/release/abrute /usr/bin
 
     # Cleaning

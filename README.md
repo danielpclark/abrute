@@ -68,7 +68,7 @@ Then you can get and compile abrute.
 ```bash
 git clone https://github.com/danielpclark/abrute.git
 cd abrute
-cargo build --release
+cargo +nightly build --release
 sudo cp target/release/abrute /usr/bin/
 ```
 
