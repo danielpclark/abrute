@@ -14,6 +14,7 @@ mod resume;
 mod result;
 use result::Error;
 use std::error::Error as StdError;
+mod reporter;
 mod process_input;
 use process_input::*;
 mod validators;
@@ -23,6 +24,9 @@ use core::*;
 #[macro_use]
 extern crate clap;
 use clap::{Arg, App};
+use std::sync::atomic::{AtomicUsize, ATOMIC_USIZE_INIT};
+
+static ITERATIONS: AtomicUsize = ATOMIC_USIZE_INIT;
 
 pub struct WorkLoad(
   pub String,         // characters: String,

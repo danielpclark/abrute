@@ -7,7 +7,7 @@
 
 use std::sync::Mutex;
 use digits::Digits;
-use std::io::{self, Write, Read}; 
+use std::io::{Read}; 
 use std::process::{Command, Output};
 use rayon::prelude::*;
 use super::result::Error;
@@ -18,9 +18,17 @@ use self::tempdir::TempDir;
 use std::{fs,path,env};
 use std::time::{Duration, Instant};
 use ::WorkLoad;
+use ::reporter::prelude::*;
 
 fn has_five_minutes_passed(t: Instant) -> bool {
   Instant::now().duration_since(t) > Duration::new(300,0)
+}
+
+fn update_report_data(five_min_iters: usize, last: &Digits, &fmp: Mutex<(usize, String>) {
+  let mut lock = fmp.try_lock();
+  if let Ok(ref mut mutex) = lock {
+    **mutex = (five_min_iters, last.to_s());
+  }
 }
 
 fn chunk_sequence(d: &mut Digits, adj: Option<String>, chunk: usize, step: Option<usize>) -> Vec<String> {
@@ -72,8 +80,7 @@ fn unzip_command(value: &str, target: &str) -> Output {
 }
 
 fn progress_report<'a>(sequencer: &Digits) {
-  print!("{}..", sequencer.to_s()); // Verbose
-  io::stdout().flush().unwrap();
+  TickerTape::report(sequencer);
 }
 
 fn has_reached_end<'a>(sequencer: &Digits, max: usize) -> Result<(), Error> {
@@ -102,6 +109,8 @@ pub fn aescrypt_core_loop<'a>(work_load: WorkLoad) -> Result<(), Error> {
     chunk.par_iter().for_each(|ref value|
       {
         let output = aes_command(&value, &target);
+
+        ITERATIONS.fetch_add(1, Ordering::SeqCst);
 
         if output.status.success() {
           let mut code_mutex = code.lock().unwrap();
@@ -182,6 +191,8 @@ pub fn unzip_core_loop<'a>(work_load: WorkLoad) -> Result<(), Error> {
       chunk.par_iter().for_each(|ref value|
         {
           let output = unzip_command(&value, &target);
+
+          ITERATIONS.fetch_add(1, Ordering::SeqCst);
 
           if output.status.success() {
             if any_file_contents(&dir, &target) {
