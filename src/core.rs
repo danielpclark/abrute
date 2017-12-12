@@ -16,9 +16,9 @@ use resume::{ResumeKey,ResumeFile};
 use self::tempdir::TempDir;
 use std::{fs,path,env};
 use std::time::{Duration, Instant};
-use ::{WorkLoad,ITERATIONS};
+use ::{WorkLoad,ITERATIONS,SUCCESS};
 use std::sync::{Arc, Mutex};
-use reporter::prelude::*;
+use reporter::CliReporter;
 use std::sync::atomic::Ordering;
 
 fn has_five_minutes_passed(t: Instant) -> bool {
@@ -80,8 +80,8 @@ fn unzip_command(value: &str, target: &str) -> Output {
     unwrap()
 }
 
-fn progress_report<'a>(sequencer: &Digits) {
-  TickerTape::report(sequencer);
+fn progress_report<'a>(reporter: &CliReporter, sequencer: &Digits) {
+  reporter.report(sequencer);
 }
 
 fn has_reached_end<'a>(sequencer: &Digits, max: usize) -> Result<(), Error> {
@@ -101,13 +101,14 @@ pub fn aescrypt_core_loop<'a>(work_load: WorkLoad) -> Result<(), Error> {
     adj,
     chunk_size,
     cluster_step,
-    reporter_handler
+    reporter_handler,
+    cli_reporter
   ) = work_load;
   let mut time_keeper = Instant::now();
   let mut five_minute_iterations: usize = 0;
   loop {
     has_reached_end(&sequencer, max)?;
-    progress_report(&sequencer);
+    progress_report(&cli_reporter, &sequencer);
 
     let chunk = chunk_sequence(
       &mut sequencer,
@@ -126,6 +127,7 @@ pub fn aescrypt_core_loop<'a>(work_load: WorkLoad) -> Result<(), Error> {
         if output.status.success() {
           let mut code_mutex = code.lock().unwrap();
           code_mutex.push(value.clone().to_string());
+          SUCCESS.store(true, Ordering::SeqCst);
           println!("Success!\nPassword is: {}", value);
         }
       }
@@ -190,7 +192,8 @@ pub fn unzip_core_loop<'a>(work_load: WorkLoad) -> Result<(), Error> {
     adj,
     chunk_size,
     cluster_step,
-    reporter_handler
+    reporter_handler,
+    cli_reporter
   ) = work_load;
   let mut time_keeper = Instant::now();
   let mut five_minute_iterations: usize = 0;
@@ -203,7 +206,7 @@ pub fn unzip_core_loop<'a>(work_load: WorkLoad) -> Result<(), Error> {
 
     loop {
       has_reached_end(&sequencer, max)?;
-      progress_report(&sequencer);
+      progress_report(&cli_reporter, &sequencer);
 
       let chunk = chunk_sequence(
         &mut sequencer,
@@ -234,6 +237,7 @@ pub fn unzip_core_loop<'a>(work_load: WorkLoad) -> Result<(), Error> {
               });
               let mut code_mutex = code.lock().unwrap();
               code_mutex.push(Ok(()));
+              SUCCESS.store(true, Ordering::SeqCst);
               println!("Success!\nPassword is: {}", value);
             }
           }

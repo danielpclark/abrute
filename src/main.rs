@@ -6,6 +6,7 @@
 // copied, modified, or distributed except according to those terms.
 
 #![feature(try_from)]
+#![feature(conservative_impl_trait)]
 extern crate digits;
 extern crate rayon;
 use digits::Digits;
@@ -24,17 +25,19 @@ use core::*;
 #[macro_use]
 extern crate clap;
 use clap::{Arg, App};
-use std::sync::atomic::{AtomicUsize, ATOMIC_USIZE_INIT};
-use reporter::ReportData;
+use std::sync::atomic::{AtomicUsize, AtomicBool, ATOMIC_USIZE_INIT, ATOMIC_BOOL_INIT};
 extern crate serde_json;
 use std::time::SystemTime;
 use std::sync::{Arc, Mutex};
 extern crate num_cpus;
 extern crate tiny_http;
 mod web;
+use web::ReportData;
 use std::thread;
+use reporter::CliReporter;
 
 static ITERATIONS: AtomicUsize = ATOMIC_USIZE_INIT;
+static SUCCESS: AtomicBool = ATOMIC_BOOL_INIT;
 
 pub struct WorkLoad(
   pub String,         // characters: String,
@@ -45,6 +48,7 @@ pub struct WorkLoad(
   pub Option<String>, // chunk: Option<String>
   pub Option<usize>,  // cluster_step: Option<(usize,usize)>
   pub ReportData,     // cloned ReportData for web JSON results and other reporters
+  pub CliReporter,    // cli Reporter chosen
 );
 
 fn run_app() -> Result<(), Error> {
@@ -85,6 +89,11 @@ fn run_app() -> Result<(), Error> {
           long("cluster").
           takes_value(true)
     ).
+    arg(Arg::with_name("reporter").
+          short("r").
+          long("reporter").
+          takes_value(true)
+    ).
     arg(Arg::with_name("TARGET").
           required(true).
           last(true)
@@ -112,6 +121,7 @@ fn run_app() -> Result<(), Error> {
    --cluster       Takes an offset and cluster size such as 1:4 for the
                    first system in a cluster of 4.  Helps different systems
                    split the workload without trying the same passwords.
+   -r, --reporter  Use `spinner` for different command line reporter.
    <TARGET>        Target file to decrypt.  The target must be preceeded
                    by a double dash: -- target.aes
    -h, --help      Prints help information.
@@ -155,6 +165,18 @@ USE OF THIS BINARY FALLS UNDER THE MIT LICENSE       (c) 2017").
     sequencer.mut_add(additive);
   }
 
+  let reporter = 
+    verify_reporter_name(
+      matches.
+      value_of("reporter").
+      unwrap_or("ticker").
+      to_string()
+    );
+
+  // JSON URI
+  println!("JSON endpoint available on Port 3838");
+  // END JSON URI
+
   // Begin Resume Feature
   let starting = sequencer.to_s();
   use ::resume::{ResumeKey,ResumeFile};
@@ -174,7 +196,7 @@ USE OF THIS BINARY FALLS UNDER THE MIT LICENSE       (c) 2017").
   // DATA for JSON web end point
   let reporter_handler = ReportData {
     cores: num_cpus::get() as u8,
-    chunk: chunk.clone().unwrap().parse::<usize>().unwrap_or(32),
+    chunk: chunk.clone().unwrap_or("").parse::<usize>().unwrap_or(32),
     cluster: {
       if matches.is_present("cluster") {
         Some(derive_cluster(matches.value_of("cluster").unwrap()).ok().unwrap())
@@ -201,7 +223,8 @@ USE OF THIS BINARY FALLS UNDER THE MIT LICENSE       (c) 2017").
     adjacent.map(str::to_string),
     chunk.map(str::to_string),
     cluster_step,
-    reporter_handler
+    reporter_handler,
+    reporter
   );
 
   let mtchs = matches.clone();
@@ -214,7 +237,7 @@ USE OF THIS BINARY FALLS UNDER THE MIT LICENSE       (c) 2017").
     return aescrypt_core_loop(work_load);
   });
 
-  let _a = web_runner.join().unwrap();
+  let _ = web_runner.join().unwrap();
   crypt_runner.join().unwrap()
 }
 

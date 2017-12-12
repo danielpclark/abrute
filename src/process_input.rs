@@ -7,6 +7,15 @@
 
 use digits::BaseCustom;
 use super::result::Error;
+use reporter::CliReporter;
+
+pub fn verify_reporter_name(rn: String) -> CliReporter {
+  match &rn[..] {
+    "spinner" => CliReporter::Spinner,
+    "ticker"  => CliReporter::TickerTape,
+    _         => CliReporter::TickerTape,
+  }
+}
 
 pub fn derive_min_max(range: &str) -> Result<(usize, usize), Error> {
   let rvals = range.split(':').collect::<Vec<&str>>();
