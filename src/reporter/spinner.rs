@@ -1,8 +1,8 @@
 use ::reporter::Reporter;
-use ::Digits;
+use ::{Digits,ITERATIONS};
 use std::io::{self, Write};
 
-const SPINNER: &[char] = &['⠋','⠙','⠹','⠸','⠼','⠴','⠦','⠧','⠇','⠏'];
+const SPINNER: [char; 10] = ['⠋','⠙','⠹','⠸','⠼','⠴','⠦','⠧','⠇','⠏'];
 
 struct Spinner;
 

@@ -31,6 +31,8 @@ use std::time::SystemTime;
 use std::sync::{Arc, Mutex};
 extern crate num_cpus;
 extern crate tiny_http;
+mod web;
+use std::thread;
 
 static ITERATIONS: AtomicUsize = ATOMIC_USIZE_INIT;
 
@@ -169,7 +171,7 @@ USE OF THIS BINARY FALLS UNDER THE MIT LICENSE       (c) 2017").
   }
   // End Resume Feature
   
-  // BEGIN JSON WEB
+  // DATA for JSON web end point
   let reporter_handler = ReportData {
     cores: num_cpus::get() as u8,
     chunk: chunk.clone().unwrap().parse::<usize>().unwrap_or(32),
@@ -187,20 +189,9 @@ USE OF THIS BINARY FALLS UNDER THE MIT LICENSE       (c) 2017").
 
   let web_reporter = reporter_handler.clone();
 
-  // HTTP SERVER IF ARG
-  {
-    use tiny_http::{Server, Response};
-
-    let server = Server::http("0.0.0.0:8000").unwrap();
-
-    for request in server.incoming_requests() {
-        let response = Response::from_string({
-          serde_json::to_string((&web_reporter)).unwrap_or("".to_string())
-        });
-        request.respond(response);
-    }
-  }
-  // END JSON WEB
+  let web_runner = thread::spawn(move || {
+    web::host_data(&web_reporter)
+  });
 
   let work_load = WorkLoad(
     resume_key_chars,
@@ -213,11 +204,18 @@ USE OF THIS BINARY FALLS UNDER THE MIT LICENSE       (c) 2017").
     reporter_handler
   );
 
-  if matches.is_present("zip") {
-    return unzip_core_loop(work_load);
-  }
+  let mtchs = matches.clone();
 
-  aescrypt_core_loop(work_load)
+  let crypt_runner = thread::spawn(move || {
+    if mtchs.is_present("zip") {
+      return unzip_core_loop(work_load);
+    }
+
+    return aescrypt_core_loop(work_load);
+  });
+
+  let _a = web_runner.join().unwrap();
+  crypt_runner.join().unwrap()
 }
 
 fn main() {
