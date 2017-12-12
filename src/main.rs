@@ -25,6 +25,12 @@ use core::*;
 extern crate clap;
 use clap::{Arg, App};
 use std::sync::atomic::{AtomicUsize, ATOMIC_USIZE_INIT};
+use reporter::ReportData;
+extern crate serde_json;
+use std::time::SystemTime;
+use std::sync::{Arc, Mutex};
+extern crate num_cpus;
+extern crate tiny_http;
 
 static ITERATIONS: AtomicUsize = ATOMIC_USIZE_INIT;
 
@@ -35,7 +41,8 @@ pub struct WorkLoad(
   pub String,         // target: String,
   pub Option<String>, // adj: Option<String>
   pub Option<String>, // chunk: Option<String>
-  pub Option<usize>   // cluster_step: Option<(usize,usize)>
+  pub Option<usize>,  // cluster_step: Option<(usize,usize)>
+  pub ReportData,     // cloned ReportData for web JSON results and other reporters
 );
 
 fn run_app() -> Result<(), Error> {
@@ -162,6 +169,39 @@ USE OF THIS BINARY FALLS UNDER THE MIT LICENSE       (c) 2017").
   }
   // End Resume Feature
   
+  // BEGIN JSON WEB
+  let reporter_handler = ReportData {
+    cores: num_cpus::get() as u8,
+    chunk: chunk.clone().unwrap().parse::<usize>().unwrap_or(32),
+    cluster: {
+      if matches.is_present("cluster") {
+        Some(derive_cluster(matches.value_of("cluster").unwrap()).ok().unwrap())
+      } else { None }
+    },
+    character_set: resume_key_chars.clone(),
+    start_time: SystemTime::now(),
+    start_at: sequencer.to_s(),
+    adjacent_limit: adjacent.map(|ref s| u8::from_str_radix(&s,10).ok().unwrap()),
+    five_min_progress: Arc::new(Mutex::new((0, "".to_string()))),
+  };
+
+  let web_reporter = reporter_handler.clone();
+
+  // HTTP SERVER IF ARG
+  {
+    use tiny_http::{Server, Response};
+
+    let server = Server::http("0.0.0.0:8000").unwrap();
+
+    for request in server.incoming_requests() {
+        let response = Response::from_string({
+          serde_json::to_string((&web_reporter)).unwrap_or("".to_string())
+        });
+        request.respond(response);
+    }
+  }
+  // END JSON WEB
+
   let work_load = WorkLoad(
     resume_key_chars,
     max,
@@ -169,7 +209,8 @@ USE OF THIS BINARY FALLS UNDER THE MIT LICENSE       (c) 2017").
     target.to_string(),
     adjacent.map(str::to_string),
     chunk.map(str::to_string),
-    cluster_step
+    cluster_step,
+    reporter_handler
   );
 
   if matches.is_present("zip") {

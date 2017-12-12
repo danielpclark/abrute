@@ -5,7 +5,6 @@
 // http://opensource.org/licenses/MIT>, at your option. This file may not be
 // copied, modified, or distributed except according to those terms.
 
-use std::sync::Mutex;
 use digits::Digits;
 use std::io::{Read}; 
 use std::process::{Command, Output};
@@ -17,14 +16,16 @@ use resume::{ResumeKey,ResumeFile};
 use self::tempdir::TempDir;
 use std::{fs,path,env};
 use std::time::{Duration, Instant};
-use ::WorkLoad;
-use ::reporter::prelude::*;
+use ::{WorkLoad,ITERATIONS};
+use std::sync::{Arc, Mutex};
+use reporter::prelude::*;
+use std::sync::atomic::Ordering;
 
 fn has_five_minutes_passed(t: Instant) -> bool {
   Instant::now().duration_since(t) > Duration::new(300,0)
 }
 
-fn update_report_data(five_min_iters: usize, last: &Digits, &fmp: Mutex<(usize, String>) {
+fn update_report_data(five_min_iters: usize, last: &Digits, fmp: &Arc<Mutex<(usize, String)>>) {
   let mut lock = fmp.try_lock();
   if let Ok(ref mut mutex) = lock {
     **mutex = (five_min_iters, last.to_s());
@@ -92,8 +93,18 @@ fn has_reached_end<'a>(sequencer: &Digits, max: usize) -> Result<(), Error> {
 }
 
 pub fn aescrypt_core_loop<'a>(work_load: WorkLoad) -> Result<(), Error> {
-  let WorkLoad(characters, max, mut sequencer, target, adj, chunk_size, cluster_step) = work_load;
+  let WorkLoad(
+    characters,
+    max,
+    mut sequencer,
+    target,
+    adj,
+    chunk_size,
+    cluster_step,
+    reporter_handler
+  ) = work_load;
   let mut time_keeper = Instant::now();
+  let mut five_minute_iterations: usize = 0;
   loop {
     has_reached_end(&sequencer, max)?;
     progress_report(&sequencer);
@@ -134,6 +145,8 @@ pub fn aescrypt_core_loop<'a>(work_load: WorkLoad) -> Result<(), Error> {
     }
 
     if has_five_minutes_passed(time_keeper) {
+      let global_iterations = ITERATIONS.load(Ordering::SeqCst);
+      five_minute_iterations = global_iterations - five_minute_iterations;
       ResumeFile::save(
         ResumeKey::new(
           characters.clone(),
@@ -143,6 +156,8 @@ pub fn aescrypt_core_loop<'a>(work_load: WorkLoad) -> Result<(), Error> {
         )
       );
 
+      update_report_data(five_minute_iterations, &sequencer, &reporter_handler.five_min_progress);
+      five_minute_iterations = global_iterations;
       time_keeper = Instant::now();
     }
   }
@@ -167,8 +182,18 @@ fn any_file_contents(dir: &TempDir, omit: &str) -> bool {
 }
 
 pub fn unzip_core_loop<'a>(work_load: WorkLoad) -> Result<(), Error> {
-  let WorkLoad(characters, max, mut sequencer, target, adj, chunk_size, cluster_step) = work_load;
+  let WorkLoad(
+    characters,
+    max,
+    mut sequencer,
+    target,
+    adj,
+    chunk_size,
+    cluster_step,
+    reporter_handler
+  ) = work_load;
   let mut time_keeper = Instant::now();
+  let mut five_minute_iterations: usize = 0;
   if let Ok(dir) = TempDir::new("abrute") {
     let cwd = env::current_dir().unwrap();
     let working = path::Path::new(&dir.path().as_os_str()).join(&target);
@@ -223,6 +248,8 @@ pub fn unzip_core_loop<'a>(work_load: WorkLoad) -> Result<(), Error> {
 
 
       if has_five_minutes_passed(time_keeper) {
+        let global_iterations = ITERATIONS.load(Ordering::SeqCst);
+        five_minute_iterations = global_iterations - five_minute_iterations;
         ResumeFile::save(
           ResumeKey::new(
             characters.clone(),
@@ -232,6 +259,8 @@ pub fn unzip_core_loop<'a>(work_load: WorkLoad) -> Result<(), Error> {
           )
         );
 
+        update_report_data(five_minute_iterations, &sequencer, &reporter_handler.five_min_progress);
+        five_minute_iterations = global_iterations;
         time_keeper = Instant::now();
       }
     }

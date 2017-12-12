@@ -1,19 +1,22 @@
+use std::time::SystemTime;
 extern crate serde;
-use serde::ser::{Serialize, Serializer, SerializeStruct};
+use self::serde::ser::{Serialize, Serializer, SerializeStruct};
 extern crate serde_json;
-use serde_json::Error;
 use std::sync::{Arc, Mutex};
+pub mod ticker_tape;
+pub mod spinner;
+use ::ITERATIONS;
+use std::sync::atomic::Ordering;
 use ::Digits;
-mod ticker_tape;
-mod spinner;
-mod json;
+use std::ops::Deref;
 
-mod prelude {
-  pub use ticker_tape::*;
-  pub use spinner::*;
-  pub use json::*;
+pub mod prelude {
+  pub use reporter::ticker_tape::*;
+  pub use reporter::spinner::*;
+  pub use reporter::Reporter;
 }
 
+#[derive(Clone)]
 pub struct ReportData {
   pub cores: u8,
   pub chunk: usize,
@@ -22,7 +25,6 @@ pub struct ReportData {
   pub start_time: SystemTime,
   pub start_at: String,
   pub adjacent_limit: Option<u8>,
-  pub iterations: &usize, // Atomic global
   pub five_min_progress: Arc<Mutex<(usize, String)>>, // Mutex try_lock
 }
 
@@ -37,7 +39,7 @@ impl Serialize for ReportData {
     let mut state = serializer.serialize_struct("ReportData", struct_fields)?;
     state.serialize_field("cores", &self.cores)?;
     state.serialize_field("chunk", &self.chunk)?;
-    if let Some(node, cluster_size) = self.cluster {
+    if let Some((node, cluster_size)) = self.cluster {
       state.serialize_field("cluster_node", &node)?;
       state.serialize_field("cluster_size", &cluster_size)?;
     }
@@ -45,10 +47,11 @@ impl Serialize for ReportData {
     state.serialize_field("start_time", &self.start_time)?;
     state.serialize_field("start_at", &self.start_at)?;
     if let Some(adj) = self.adjacent_limit {
-      state.serialize_field("adjacent_limit", &self.adjacent_limit)?;
+      state.serialize_field("adjacent_limit", &adj)?;
     }
-    state.serialize_field("iterations", &self.iterations.load(Ordering::SeqCst))?;
-    let (five_min_iters, last_string) = self.five_min_progress.lock().unwrap();
+    state.serialize_field("iterations", &ITERATIONS.load(Ordering::SeqCst))?;
+    let getter = self.five_min_progress.lock().unwrap();
+    let &(five_min_iters, ref last_string) = getter.deref();
     state.serialize_field("last_five_minute_iterations", &five_min_iters)?;
     state.serialize_field("last_attempt", &last_string)?;
     state.end()
@@ -56,5 +59,5 @@ impl Serialize for ReportData {
 }
 
 pub trait Reporter {
-  fn report(data: ReportData);
+  fn report(data: &Digits);
 }

@@ -1,4 +1,5 @@
-use ::reporter::{Reporter,ReportData};
+use ::reporter::Reporter;
+use ::Digits;
 use std::io::{self, Write};
 
 const SPINNER: &[char] = &['⠋','⠙','⠹','⠸','⠼','⠴','⠦','⠧','⠇','⠏'];
@@ -6,7 +7,7 @@ const SPINNER: &[char] = &['⠋','⠙','⠹','⠸','⠼','⠴','⠦','⠧','⠇'
 struct Spinner;
 
 impl Reporter for Spinner {
-  fn report(data: ReportData) {
+  fn report(_data: &Digits) {
     print!(":");
     io::stdout().flush().unwrap();
   }
