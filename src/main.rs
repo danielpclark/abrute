@@ -242,12 +242,8 @@ USE OF THIS BINARY FALLS UNDER THE MIT LICENSE       (c) 2017").
 
   let wr: RawPthread = web_runner.as_pthread_t();
   let cr = crypt_runner.join().unwrap();
-  match cr {
-    _ => {
-      unsafe { pthread_cancel(wr); }
-      cr
-    }
-  }
+  unsafe { pthread_cancel(wr); }
+  cr
 }
 
 fn main() {
