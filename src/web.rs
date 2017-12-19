@@ -16,6 +16,8 @@ pub fn host_data(web_reporter: &ReportData) {
       serde_json::to_string((&web_reporter)).unwrap_or("".to_string())
     });
     let _ = request.respond(response);
+
+    // if SUCCESS.load(Ordering::SeqCst) { return () };
   }
 }
 

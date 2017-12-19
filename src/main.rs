@@ -6,7 +6,7 @@
 // copied, modified, or distributed except according to those terms.
 
 #![feature(try_from)]
-#![feature(conservative_impl_trait)]
+#![feature(libc)]
 extern crate digits;
 extern crate rayon;
 use digits::Digits;
@@ -35,6 +35,9 @@ mod web;
 use web::ReportData;
 use std::thread;
 use reporter::CliReporter;
+extern crate libc;
+use libc::pthread_cancel;
+use std::os::unix::thread::{RawPthread,JoinHandleExt};
 
 static ITERATIONS: AtomicUsize = ATOMIC_USIZE_INIT;
 static SUCCESS: AtomicBool = ATOMIC_BOOL_INIT;
@@ -211,7 +214,7 @@ USE OF THIS BINARY FALLS UNDER THE MIT LICENSE       (c) 2017").
 
   let web_reporter = reporter_handler.clone();
 
-  let web_runner = thread::spawn(move || {
+  let web_runner: thread::JoinHandle<_> = thread::spawn(move || {
     web::host_data(&web_reporter)
   });
 
@@ -231,20 +234,29 @@ USE OF THIS BINARY FALLS UNDER THE MIT LICENSE       (c) 2017").
 
   let crypt_runner = thread::spawn(move || {
     if mtchs.is_present("zip") {
-      return unzip_core_loop(work_load);
+      unzip_core_loop(work_load)
+    } else {
+      aescrypt_core_loop(work_load)
     }
-
-    return aescrypt_core_loop(work_load);
   });
 
-  let _ = web_runner.join().unwrap();
-  crypt_runner.join().unwrap()
+  let wr: RawPthread = web_runner.as_pthread_t();
+  let cr = crypt_runner.join().unwrap();
+  match cr {
+    _ => {
+      unsafe { pthread_cancel(wr); }
+      cr
+    }
+  }
 }
 
 fn main() {
   ::std::process::exit(
     match run_app() {
-      Ok(_) => 0,
+      Ok(_) => {
+        println!("Exiting…");
+        0
+      },
       Err(err) => {
         writeln!(
           io::stderr(),
