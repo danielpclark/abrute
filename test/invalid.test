@@ -60,7 +60,7 @@ describe "* abrute with failed results"
   it "fails with unzip"
     folder="$(pwd)"
     cd test/data/
-    ../../target/debug/abrute 4 asdfg -z -a 0 -- example.zip 2>/dev/null
+    ../../target/debug/abrute 4 asdfg -z -a 0 -- example.zip > /dev/null 2>&1
     assert unequal $? 0
     cd $folder
     assert file_absent test/data/zipped.file

@@ -5,9 +5,8 @@
 // http://opensource.org/licenses/MIT>, at your option. This file may not be
 // copied, modified, or distributed except according to those terms.
 
-use std::sync::Mutex;
 use digits::Digits;
-use std::io::{self, Write, Read}; 
+use std::io::{Read}; 
 use std::process::{Command, Output};
 use rayon::prelude::*;
 use super::result::Error;
@@ -17,10 +16,20 @@ use resume::{ResumeKey,ResumeFile};
 use self::tempdir::TempDir;
 use std::{fs,path,env};
 use std::time::{Duration, Instant};
-use ::WorkLoad;
+use ::{WorkLoad,ITERATIONS,SUCCESS};
+use std::sync::{Arc, Mutex};
+use reporter::CliReporter;
+use std::sync::atomic::Ordering;
 
 fn has_five_minutes_passed(t: Instant) -> bool {
   Instant::now().duration_since(t) > Duration::new(300,0)
+}
+
+fn update_report_data(five_min_iters: usize, last: &Digits, fmp: &Arc<Mutex<(usize, String)>>) {
+  let mut lock = fmp.try_lock();
+  if let Ok(ref mut mutex) = lock {
+    **mutex = (five_min_iters, last.to_s());
+  }
 }
 
 fn chunk_sequence(d: &mut Digits, adj: Option<String>, chunk: usize, step: Option<usize>) -> Vec<String> {
@@ -71,9 +80,8 @@ fn unzip_command(value: &str, target: &str) -> Output {
     unwrap()
 }
 
-fn progress_report<'a>(sequencer: &Digits) {
-  print!("{}..", sequencer.to_s()); // Verbose
-  io::stdout().flush().unwrap();
+fn progress_report<'a>(reporter: &CliReporter, sequencer: &Digits) {
+  reporter.report(sequencer);
 }
 
 fn has_reached_end<'a>(sequencer: &Digits, max: usize) -> Result<(), Error> {
@@ -85,11 +93,22 @@ fn has_reached_end<'a>(sequencer: &Digits, max: usize) -> Result<(), Error> {
 }
 
 pub fn aescrypt_core_loop<'a>(work_load: WorkLoad) -> Result<(), Error> {
-  let WorkLoad(characters, max, mut sequencer, target, adj, chunk_size, cluster_step) = work_load;
+  let WorkLoad(
+    characters,
+    max,
+    mut sequencer,
+    target,
+    adj,
+    chunk_size,
+    cluster_step,
+    reporter_handler,
+    cli_reporter
+  ) = work_load;
   let mut time_keeper = Instant::now();
+  let mut five_minute_iterations: usize = 0;
   loop {
     has_reached_end(&sequencer, max)?;
-    progress_report(&sequencer);
+    progress_report(&cli_reporter, &sequencer);
 
     let chunk = chunk_sequence(
       &mut sequencer,
@@ -103,9 +122,12 @@ pub fn aescrypt_core_loop<'a>(work_load: WorkLoad) -> Result<(), Error> {
       {
         let output = aes_command(&value, &target);
 
+        ITERATIONS.fetch_add(1, Ordering::SeqCst);
+
         if output.status.success() {
           let mut code_mutex = code.lock().unwrap();
           code_mutex.push(value.clone().to_string());
+          SUCCESS.store(true, Ordering::SeqCst);
           println!("Success!\nPassword is: {}", value);
         }
       }
@@ -125,6 +147,8 @@ pub fn aescrypt_core_loop<'a>(work_load: WorkLoad) -> Result<(), Error> {
     }
 
     if has_five_minutes_passed(time_keeper) {
+      let global_iterations = ITERATIONS.load(Ordering::SeqCst);
+      five_minute_iterations = global_iterations - five_minute_iterations;
       ResumeFile::save(
         ResumeKey::new(
           characters.clone(),
@@ -134,6 +158,8 @@ pub fn aescrypt_core_loop<'a>(work_load: WorkLoad) -> Result<(), Error> {
         )
       );
 
+      update_report_data(five_minute_iterations, &sequencer, &reporter_handler.five_min_progress);
+      five_minute_iterations = global_iterations;
       time_keeper = Instant::now();
     }
   }
@@ -158,8 +184,19 @@ fn any_file_contents(dir: &TempDir, omit: &str) -> bool {
 }
 
 pub fn unzip_core_loop<'a>(work_load: WorkLoad) -> Result<(), Error> {
-  let WorkLoad(characters, max, mut sequencer, target, adj, chunk_size, cluster_step) = work_load;
+  let WorkLoad(
+    characters,
+    max,
+    mut sequencer,
+    target,
+    adj,
+    chunk_size,
+    cluster_step,
+    reporter_handler,
+    cli_reporter
+  ) = work_load;
   let mut time_keeper = Instant::now();
+  let mut five_minute_iterations: usize = 0;
   if let Ok(dir) = TempDir::new("abrute") {
     let cwd = env::current_dir().unwrap();
     let working = path::Path::new(&dir.path().as_os_str()).join(&target);
@@ -169,7 +206,7 @@ pub fn unzip_core_loop<'a>(work_load: WorkLoad) -> Result<(), Error> {
 
     loop {
       has_reached_end(&sequencer, max)?;
-      progress_report(&sequencer);
+      progress_report(&cli_reporter, &sequencer);
 
       let chunk = chunk_sequence(
         &mut sequencer,
@@ -182,6 +219,8 @@ pub fn unzip_core_loop<'a>(work_load: WorkLoad) -> Result<(), Error> {
       chunk.par_iter().for_each(|ref value|
         {
           let output = unzip_command(&value, &target);
+
+          ITERATIONS.fetch_add(1, Ordering::SeqCst);
 
           if output.status.success() {
             if any_file_contents(&dir, &target) {
@@ -198,6 +237,7 @@ pub fn unzip_core_loop<'a>(work_load: WorkLoad) -> Result<(), Error> {
               });
               let mut code_mutex = code.lock().unwrap();
               code_mutex.push(Ok(()));
+              SUCCESS.store(true, Ordering::SeqCst);
               println!("Success!\nPassword is: {}", value);
             }
           }
@@ -212,6 +252,8 @@ pub fn unzip_core_loop<'a>(work_load: WorkLoad) -> Result<(), Error> {
 
 
       if has_five_minutes_passed(time_keeper) {
+        let global_iterations = ITERATIONS.load(Ordering::SeqCst);
+        five_minute_iterations = global_iterations - five_minute_iterations;
         ResumeFile::save(
           ResumeKey::new(
             characters.clone(),
@@ -221,6 +263,8 @@ pub fn unzip_core_loop<'a>(work_load: WorkLoad) -> Result<(), Error> {
           )
         );
 
+        update_report_data(five_minute_iterations, &sequencer, &reporter_handler.five_min_progress);
+        five_minute_iterations = global_iterations;
         time_keeper = Instant::now();
       }
     }

@@ -191,7 +191,7 @@ fn input_and_output_for_resume_works() {
   let k = keys.rkeys.iter().next();
   assert_eq!(Some(&r), k);
 
-  let _a = fs::remove_file(".example.res");
+  let _ = fs::remove_file(".example.res");
   assert!(!Path::new(".example.res").exists(), "`.example.res` cleanup failed!");
 }
 
@@ -213,7 +213,7 @@ impl ResumeFile {
 
     if let Ok(mut f) = file {
       f.write_all(stringify.as_bytes()).ok();
-      let _a = f.sync_data();
+      let _ = f.sync_data();
     }
 
     ResumeFile::backup()
@@ -243,8 +243,8 @@ impl ResumeFile {
   }
 
   pub(crate) fn purge() {
-    let _a = fs::remove_file(".abrute");
-    let _b = fs::remove_file(".abrute.bak");
+    let _ = fs::remove_file(".abrute");
+    let _ = fs::remove_file(".abrute.bak");
   }
 }
 

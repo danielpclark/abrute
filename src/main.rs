@@ -6,6 +6,7 @@
 // copied, modified, or distributed except according to those terms.
 
 #![feature(try_from)]
+#![feature(libc)]
 extern crate digits;
 extern crate rayon;
 use digits::Digits;
@@ -14,6 +15,7 @@ mod resume;
 mod result;
 use result::Error;
 use std::error::Error as StdError;
+mod reporter;
 mod process_input;
 use process_input::*;
 mod validators;
@@ -23,6 +25,22 @@ use core::*;
 #[macro_use]
 extern crate clap;
 use clap::{Arg, App};
+use std::sync::atomic::{AtomicUsize, AtomicBool, ATOMIC_USIZE_INIT, ATOMIC_BOOL_INIT};
+extern crate serde_json;
+use std::time::SystemTime;
+use std::sync::{Arc, Mutex};
+extern crate num_cpus;
+extern crate tiny_http;
+mod web;
+use web::ReportData;
+use std::thread;
+use reporter::CliReporter;
+extern crate libc;
+use libc::pthread_cancel;
+use std::os::unix::thread::{RawPthread,JoinHandleExt};
+
+static ITERATIONS: AtomicUsize = ATOMIC_USIZE_INIT;
+static SUCCESS: AtomicBool = ATOMIC_BOOL_INIT;
 
 pub struct WorkLoad(
   pub String,         // characters: String,
@@ -31,7 +49,9 @@ pub struct WorkLoad(
   pub String,         // target: String,
   pub Option<String>, // adj: Option<String>
   pub Option<String>, // chunk: Option<String>
-  pub Option<usize>   // cluster_step: Option<(usize,usize)>
+  pub Option<usize>,  // cluster_step: Option<(usize,usize)>
+  pub ReportData,     // cloned ReportData for web JSON results and other reporters
+  pub CliReporter,    // cli Reporter chosen
 );
 
 fn run_app() -> Result<(), Error> {
@@ -72,6 +92,11 @@ fn run_app() -> Result<(), Error> {
           long("cluster").
           takes_value(true)
     ).
+    arg(Arg::with_name("reporter").
+          short("r").
+          long("reporter").
+          takes_value(true)
+    ).
     arg(Arg::with_name("TARGET").
           required(true).
           last(true)
@@ -99,6 +124,7 @@ fn run_app() -> Result<(), Error> {
    --cluster       Takes an offset and cluster size such as 1:4 for the
                    first system in a cluster of 4.  Helps different systems
                    split the workload without trying the same passwords.
+   -r, --reporter  Use `spinner` for different command line reporter.
    <TARGET>        Target file to decrypt.  The target must be preceeded
                    by a double dash: -- target.aes
    -h, --help      Prints help information.
@@ -142,6 +168,18 @@ USE OF THIS BINARY FALLS UNDER THE MIT LICENSE       (c) 2017").
     sequencer.mut_add(additive);
   }
 
+  let reporter = 
+    verify_reporter_name(
+      matches.
+      value_of("reporter").
+      unwrap_or("ticker").
+      to_string()
+    );
+
+  // JSON URI
+  println!("JSON endpoint available on Port 3838");
+  // END JSON URI
+
   // Begin Resume Feature
   let starting = sequencer.to_s();
   use ::resume::{ResumeKey,ResumeFile};
@@ -158,6 +196,28 @@ USE OF THIS BINARY FALLS UNDER THE MIT LICENSE       (c) 2017").
   }
   // End Resume Feature
   
+  // DATA for JSON web end point
+  let reporter_handler = ReportData {
+    cores: num_cpus::get() as u8,
+    chunk: chunk.clone().unwrap_or("").parse::<usize>().unwrap_or(32),
+    cluster: {
+      if matches.is_present("cluster") {
+        Some(derive_cluster(matches.value_of("cluster").unwrap()).ok().unwrap())
+      } else { None }
+    },
+    character_set: resume_key_chars.clone(),
+    start_time: SystemTime::now(),
+    start_at: sequencer.to_s(),
+    adjacent_limit: adjacent.map(|ref s| u8::from_str_radix(&s,10).ok().unwrap()),
+    five_min_progress: Arc::new(Mutex::new((0, "".to_string()))),
+  };
+
+  let web_reporter = reporter_handler.clone();
+
+  let web_runner: thread::JoinHandle<_> = thread::spawn(move || {
+    web::host_data(&web_reporter)
+  });
+
   let work_load = WorkLoad(
     resume_key_chars,
     max,
@@ -165,20 +225,34 @@ USE OF THIS BINARY FALLS UNDER THE MIT LICENSE       (c) 2017").
     target.to_string(),
     adjacent.map(str::to_string),
     chunk.map(str::to_string),
-    cluster_step
+    cluster_step,
+    reporter_handler,
+    reporter
   );
 
-  if matches.is_present("zip") {
-    return unzip_core_loop(work_load);
-  }
+  let mtchs = matches.clone();
 
-  aescrypt_core_loop(work_load)
+  let crypt_runner = thread::spawn(move || {
+    if mtchs.is_present("zip") {
+      unzip_core_loop(work_load)
+    } else {
+      aescrypt_core_loop(work_load)
+    }
+  });
+
+  let wr: RawPthread = web_runner.as_pthread_t();
+  let cr = crypt_runner.join().unwrap();
+  unsafe { pthread_cancel(wr); }
+  cr
 }
 
 fn main() {
   ::std::process::exit(
     match run_app() {
-      Ok(_) => 0,
+      Ok(_) => {
+        println!("Exiting…");
+        0
+      },
       Err(err) => {
         writeln!(
           io::stderr(),
