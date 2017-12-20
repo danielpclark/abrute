@@ -48,5 +48,3 @@ impl Serialize for ReportData {
     state.end()
   }
 }
-
-
