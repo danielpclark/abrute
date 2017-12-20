@@ -6,6 +6,8 @@
 // copied, modified, or distributed except according to those terms.
 
 use digits::Digits;
+use ::model::work_load::WorkLoad;
+use ::model::cli_reporter::CliReporter;
 use std::io::{Read}; 
 use std::process::{Command, Output};
 use rayon::prelude::*;
@@ -16,9 +18,8 @@ use resume::{ResumeKey,ResumeFile};
 use self::tempdir::TempDir;
 use std::{fs,path,env};
 use std::time::{Duration, Instant};
-use ::{WorkLoad,ITERATIONS,SUCCESS};
+use ::{ITERATIONS,SUCCESS};
 use std::sync::{Arc, Mutex};
-use reporter::CliReporter;
 use std::sync::atomic::Ordering;
 
 fn has_five_minutes_passed(t: Instant) -> bool {

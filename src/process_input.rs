@@ -7,19 +7,22 @@
 
 use digits::BaseCustom;
 use super::result::Error;
-use reporter::CliReporter;
+use ::model::cli_reporter::CliReporter;
 
 pub fn verify_reporter_name(rn: String) -> CliReporter {
   match &rn[..] {
     "spinner" => CliReporter::Spinner,
-    "ticker"  => CliReporter::TickerTape,
     _         => CliReporter::TickerTape,
   }
 }
 
 pub fn derive_min_max(range: &str) -> Result<(usize, usize), Error> {
   let rvals = range.split(':').collect::<Vec<&str>>();
-  for item in &rvals { if item.parse::<u8>().is_err() { return Err(Error::InvalidRange); } }
+  for item in &rvals {
+    if item.parse::<u8>().is_err() {
+      return Err(Error::InvalidRange);
+    }
+  }
   let mut rivals = rvals.iter();
   let min = rivals.next().unwrap();
   let max = rivals.next();
@@ -36,13 +39,19 @@ pub fn derive_min_max(range: &str) -> Result<(usize, usize), Error> {
 pub fn derive_cluster(range: &str) -> Result<(usize, usize), Error> {
   let rvals = range.split(':').collect::<Vec<&str>>();
   if rvals.len() != 2 { return Err(Error::InvalidRange); }
-  for item in &rvals { if item.parse::<usize>().is_err() { return Err(Error::InvalidRange); } }
+  for item in &rvals {
+    if item.parse::<usize>().is_err() {
+      return Err(Error::InvalidRange);
+    }
+  }
   let mut rivals = rvals.iter();
   let offset = rivals.next().unwrap();
   let cluster_size = rivals.next().unwrap();
   let offset = offset.parse::<usize>().unwrap();
   let cluster_size = cluster_size.parse::<usize>().unwrap();
-  if offset > cluster_size || offset == 0 { return Err(Error::InvalidRange); }
+  if offset > cluster_size || offset == 0 {
+    return Err(Error::InvalidRange);
+  }
   Ok((offset, cluster_size))
 }
 

@@ -10,11 +10,12 @@
 extern crate digits;
 extern crate rayon;
 use digits::Digits;
-use std::io::{self, Write}; 
+mod web;
+mod model;
+use model::report_data::ReportData;
+use model::work_load::WorkLoad;
 mod resume;
 mod result;
-use result::Error;
-use std::error::Error as StdError;
 mod reporter;
 mod process_input;
 use process_input::*;
@@ -22,37 +23,35 @@ mod validators;
 use validators::*;
 mod core;
 use core::*;
+use std::io::{self, Write}; 
+use result::Error;
+use std::error::Error as StdError;
 #[macro_use]
 extern crate clap;
 use clap::{Arg, App};
-use std::sync::atomic::{AtomicUsize, AtomicBool, ATOMIC_USIZE_INIT, ATOMIC_BOOL_INIT};
 extern crate serde_json;
 use std::time::SystemTime;
 use std::sync::{Arc, Mutex};
 extern crate num_cpus;
 extern crate tiny_http;
-mod web;
-use web::ReportData;
+
 use std::thread;
-use reporter::CliReporter;
 extern crate libc;
 use libc::pthread_cancel;
-use std::os::unix::thread::{RawPthread,JoinHandleExt};
+use std::os::unix::thread::{
+  RawPthread,
+  JoinHandleExt
+};
+
+use std::sync::atomic::{
+  AtomicUsize,
+  AtomicBool,
+  ATOMIC_USIZE_INIT,
+  ATOMIC_BOOL_INIT
+};
 
 static ITERATIONS: AtomicUsize = ATOMIC_USIZE_INIT;
 static SUCCESS: AtomicBool = ATOMIC_BOOL_INIT;
-
-pub struct WorkLoad(
-  pub String,         // characters: String,
-  pub usize,          // max: usize,
-  pub Digits,         // mut sequencer: Digits,
-  pub String,         // target: String,
-  pub Option<String>, // adj: Option<String>
-  pub Option<String>, // chunk: Option<String>
-  pub Option<usize>,  // cluster_step: Option<(usize,usize)>
-  pub ReportData,     // cloned ReportData for web JSON results and other reporters
-  pub CliReporter,    // cli Reporter chosen
-);
 
 fn run_app() -> Result<(), Error> {
   let matches = App::new("abrute - AES Brute Force File Decryptor").
@@ -140,13 +139,20 @@ USE OF THIS BINARY FALLS UNDER THE MIT LICENSE       (c) 2017").
     validate_aescrpyt_executable()?;
   }
     
-  let (min, max) = derive_min_max(matches.value_of("RANGE").unwrap())?;
+  let (min, max) = derive_min_max(
+    matches.value_of("RANGE").unwrap()
+  )?;
   
   validate_start_string(&matches, max)?;
 
-  let mapping = derive_character_base(matches.value_of("CHARACTERS").unwrap());
+  let mapping = derive_character_base(
+    matches.value_of("CHARACTERS").unwrap()
+  );
   let resume_key_chars = mapping_to_characters(&mapping);
-  let mut sequencer = Digits::new(mapping, matches.value_of("start").unwrap_or("").to_string());
+  let mut sequencer = Digits::new(
+    mapping,
+    matches.value_of("start").unwrap_or("").to_string()
+  );
   sequencer.zero_fill(min as usize);
 
   let target = matches.value_of("TARGET").unwrap_or("");
@@ -162,7 +168,9 @@ USE OF THIS BINARY FALLS UNDER THE MIT LICENSE       (c) 2017").
 
   let mut cluster_step: Option<usize> = None;
   if matches.is_present("cluster") {
-    let (offset, step) = derive_cluster(matches.value_of("cluster").unwrap())?;
+    let (offset, step) = derive_cluster(
+      matches.value_of("cluster").unwrap()
+    )?;
     cluster_step = Some(step);
     let additive = sequencer.gen(offset as u64).pred_till_zero();
     sequencer.mut_add(additive);
@@ -199,22 +207,33 @@ USE OF THIS BINARY FALLS UNDER THE MIT LICENSE       (c) 2017").
   // DATA for JSON web end point
   let reporter_handler = ReportData {
     cores: num_cpus::get() as u8,
-    chunk: chunk.clone().unwrap_or("").parse::<usize>().unwrap_or(32),
+    chunk: chunk.
+      clone().
+      unwrap_or("").
+      parse::<usize>().
+      unwrap_or(32),
     cluster: {
       if matches.is_present("cluster") {
-        Some(derive_cluster(matches.value_of("cluster").unwrap()).ok().unwrap())
+        Some(
+          derive_cluster(
+            matches.value_of("cluster").unwrap()
+          ).ok().unwrap()
+        )
       } else { None }
     },
     character_set: resume_key_chars.clone(),
     start_time: SystemTime::now(),
     start_at: sequencer.to_s(),
-    adjacent_limit: adjacent.map(|ref s| u8::from_str_radix(&s,10).ok().unwrap()),
-    five_min_progress: Arc::new(Mutex::new((0, "".to_string()))),
+    adjacent_limit: adjacent.map(|ref s|
+      u8::from_str_radix(&s,10).ok().unwrap()
+    ),
+    five_min_progress: Arc::new(
+      Mutex::new((0, "".to_string()))
+    ),
   };
 
   let web_reporter = reporter_handler.clone();
-
-  let web_runner: thread::JoinHandle<_> = thread::spawn(move || {
+  let web_runner = thread::spawn(move || {
     web::host_data(&web_reporter)
   });
 
@@ -241,8 +260,13 @@ USE OF THIS BINARY FALLS UNDER THE MIT LICENSE       (c) 2017").
   });
 
   let wr: RawPthread = web_runner.as_pthread_t();
+
   let cr = crypt_runner.join().unwrap();
-  unsafe { pthread_cancel(wr); }
+
+  unsafe {
+    pthread_cancel(wr);
+  }
+
   cr
 }
 

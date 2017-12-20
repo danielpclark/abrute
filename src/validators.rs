@@ -23,14 +23,22 @@ pub fn validate_chunk_input(v: &str) -> Result<(), Error> {
 
 pub fn validate_start_string(matches: &clap::ArgMatches, max: usize) -> Result<(), Error> {
   if let Some(s) = matches.value_of("start") {
-    if s.len() > max { return Err(Error::InvalidStringLength); } 
+    if s.len() > max {
+      return Err(Error::InvalidStringLength);
+    } 
 
-    let chrctrs: Vec<char> = matches.value_of("CHARACTERS").unwrap().chars().collect();
+    let chrctrs: Vec<char> = matches.
+      value_of("CHARACTERS").
+      unwrap().
+      chars().
+      collect();
     let mut itr = s.chars();
     loop {
       match itr.next() {
         Some(ref c) => {
-          if !chrctrs.contains(c) { return Err(Error::InvalidCharacterSet); }
+          if !chrctrs.contains(c) {
+            return Err(Error::InvalidCharacterSet);
+          }
         },
         _ => break,
       }
@@ -50,7 +58,9 @@ pub fn validate_and_prep_sequencer_adjacent<'a>(
   if let &Some(num) = &adjacent { 
     validate_adjacent_input(num.to_string())?;
     if seq_base > 3 {
-      sequencer.prep_non_adjacent(num.parse::<usize>().unwrap()); 
+      sequencer.prep_non_adjacent(
+        num.parse::<usize>().unwrap()
+      ); 
     }
   }
 
