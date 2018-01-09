@@ -28,14 +28,15 @@ pub fn report(data: &Digits) {
     let entry = hm.get_mut(&(len as u8)).unwrap();
     let &mut (_, start, duration) = entry;
 
-    let iterated = ITERATIONS.load(Ordering::SeqCst) - start.clone() as usize;
+    let iters = ITERATIONS.load(Ordering::SeqCst);
+    let iterated = iters - start.clone() as usize;
 
     let min = reader.keys().min().unwrap();
     let max = reader.keys().max().unwrap();
     let start_instant = reader.get(min).unwrap().2;
     let seconds = Instant::now().duration_since(start_instant).as_secs();
-    let ips = if seconds == 0 { 0 } else { iterated/seconds as usize };
-    print!("\x1b[1000D{} :: Category: {}->{}:{}, Rating: {} IPS", data.to_s(), min, max, iterated, ips);
+    let ips = if seconds == 0 { 0 } else { iters/seconds as usize };
+    print!("\x1b[1000D{} :: Category: {}->{}:{}, Rating Total: {} IPS", data.to_s(), min, max, iterated, ips);
 
     *entry = (iterated as u64, start.clone(), duration.clone());
   } else {
@@ -50,12 +51,14 @@ pub fn report(data: &Digits) {
     hm.insert(len as u8, (start_iteration, iters as u64, instant));
 
     if has_previous {
-      let start_iters = if hm.contains_key(&((previous - 1) as u8)) { hm.get(&((previous - 1) as u8)).unwrap().0 } else { 0 };
-      let iterations = iters - (start_iters as usize);
+      let iterations =
+        if hm.contains_key(&((previous) as u8)) {
+          hm.get(&((previous) as u8)).unwrap().0 as usize
+        } else { 0 };
       let start = hm.get(&(previous as u8)).unwrap().2;
       let seconds = Instant::now().duration_since(start).as_secs();
       let ips = if seconds == 0 { 0 } else { iterations/(seconds as usize) };
-      println!("\nRange: {}, Iterations: {}, Rating: {} IPS", previous, iterations, ips);
+      println!("\nRange: {}, Iterations: {}, Interim Rating: {} IPS", previous, iterations, ips);
     }
   }
   io::stdout().flush().unwrap();
