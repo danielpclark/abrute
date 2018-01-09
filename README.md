@@ -91,6 +91,8 @@ sudo cp target/release/abrute /usr/bin/
    --cluster       Takes an offset and cluster size such as 1:4 for the
                    first system in a cluster of 4.  Helps different systems
                    split the workload without trying the same passwords.
+   -r, --reporter  Use `spinner`, or `benchmark` to use a different command
+                   line reporter.
    <TARGET>        Target file to decrypt.  The target must be preceeded
                    by a double dash: -- target.aes
    -h, --help      Prints help information.

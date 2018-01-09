@@ -1,6 +1,6 @@
 .\" Manpage for abrute
 .\" Contact alcamech@gmail.com to correct errors or typos.
-.TH abrute 1 "12 October 2017" "abrute"
+.TH abrute 1 "9 January 2018" "abrute"
 .SH NAME
 abrute \- Multi-threaded AES Brute Force File Decryption
 .SH SYNOPSIS
@@ -21,6 +21,16 @@ Multi-threaded AES Brute Force File Decryption
 -s, --start     Starting character sequence to begin with.
 .PP
 -z, --zip       Use `unzip` decryption instead of `aescrypt`.
+.PP
+-c, --chunk     Workload chunk size per core before status update.
+                Defaults to 32.
+.PP
+--cluster       Takes an offset and cluster size such as 1:4 for the
+                first system in a cluster of 4.  Helps different systems
+                split the workload without trying the same passwords.
+.PP
+-r, --reporter  Use `spinner`, or `benchmark` to use a different command
+                line reporter.
 .PP
 <TARGET>        Target file to decrypt.  The target must be preceeded
                 by a double dash: -- target.aes
@@ -44,7 +54,7 @@ allowed adjacent characters to be 0, and a target path to the example.file.aes
 
 abrute 4 1234 -a 0 -- example.file.aes
 .SH COPYRIGHT
-Copyright 2017 Daniel P. Clark
+Copyright 2017-2018 Daniel P. Clark
 
 Permission is hereby granted, free of charge, to any person obtaining
 a copy of this software and associated documentation files (the
