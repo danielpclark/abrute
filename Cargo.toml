@@ -1,6 +1,6 @@
 [package]
 name = "abrute"
-version = "0.1.7"
+version = "0.1.8"
 authors = ["Daniel P. Clark <6ftdan@gmail.com>"]
 description = "AESCrypt Brute force attempter."
 documentation = "http://danielpclark.github.io/abrute/index.html"
@@ -21,3 +21,4 @@ num_cpus = "~1.7"
 serde = "1.0.24"
 serde_json = "1.0.8"
 tiny_http = "~0.5"
+lazy_static = "1.0.0"

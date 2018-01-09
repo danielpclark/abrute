@@ -11,8 +11,9 @@ use ::model::cli_reporter::CliReporter;
 
 pub fn verify_reporter_name(rn: String) -> CliReporter {
   match &rn[..] {
-    "spinner" => CliReporter::Spinner,
-    _         => CliReporter::TickerTape,
+    "spinner"   => CliReporter::Spinner,
+    "benchmark" => CliReporter::Benchmark,
+    _           => CliReporter::TickerTape,
   }
 }
 

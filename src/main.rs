@@ -34,6 +34,8 @@ use std::time::SystemTime;
 use std::sync::{Arc, Mutex};
 extern crate num_cpus;
 extern crate tiny_http;
+#[macro_use]
+extern crate lazy_static;
 
 use std::thread;
 extern crate libc;
@@ -123,7 +125,8 @@ fn run_app() -> Result<(), Error> {
    --cluster       Takes an offset and cluster size such as 1:4 for the
                    first system in a cluster of 4.  Helps different systems
                    split the workload without trying the same passwords.
-   -r, --reporter  Use `spinner` for different command line reporter.
+   -r, --reporter  Use `spinner`, or `benchmark` for different command line
+                   reporter.
    <TARGET>        Target file to decrypt.  The target must be preceeded
                    by a double dash: -- target.aes
    -h, --help      Prints help information.
