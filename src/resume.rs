@@ -32,16 +32,16 @@ impl ResumeKeyDB {
     buf_reader.read_to_string(&mut contents).ok();
 
     let mut db: Vec<ResumeKey> = vec![];
-    for item in contents.
-        split("\n\n").
-        map(|s| s.to_string()).
-        filter(|s| !s.is_empty()).
-        collect::<Vec<String>>() {
-      let rk = ResumeKey::try_from(item);
-      if let Ok(key) = rk {
-        db.push(key);
-      }
-    }
+    contents.
+      split("\n\n").
+      map(|s| s.to_string()).
+      filter(|s| !s.is_empty()).
+      for_each(|item| {
+        let rk = ResumeKey::try_from(item);
+        if let Ok(key) = rk {
+          db.push(key);
+        }
+      });
     ResumeKeyDB { rkeys: db }
   }
 
