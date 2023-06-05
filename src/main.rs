@@ -1,4 +1,4 @@
-// Copyright 2017-2018 Daniel P. Clark & other abrute Developers
+// Copyright 2017-2023 Daniel P. Clark & other abrute Developers
 //
 // Licensed under the Apache License, Version 2.0, <LICENSE-APACHE or
 // http://apache.org/licenses/LICENSE-2.0> or the MIT license <LICENSE-MIT or
@@ -26,7 +26,7 @@ use result::Error;
 use std::io::{self, Write};
 #[macro_use]
 extern crate clap;
-use clap::{Arg, Command};
+use clap::{Arg, ArgAction, Command};
 extern crate serde_json;
 use std::sync::{Arc, Mutex};
 use std::time::SystemTime;
@@ -47,28 +47,63 @@ static SUCCESS: AtomicBool = AtomicBool::new(false);
 
 fn run_app() -> Result<(), Error> {
     let matches = Command::new("abrute - AES Brute Force File Decryptor")
-        .version(&format!("v{}", crate_version!())[..])
+        .version(crate_version!())
         .author(crate_authors!("\n"))
         .override_usage("abrute <RANGE> <CHARACTERS> [OPTIONS] -- <TARGET>")
-        .arg(Arg::new("RANGE").required(true).index(1))
-        .arg(Arg::new("CHARACTERS").required(true).index(2))
+        .arg(
+            Arg::new("RANGE")
+                .required(true)
+                .index(1)
+        )
+        .arg(
+            Arg::new("CHARACTERS")
+                .required(true)
+                .index(2)
+        )
         .arg(
             Arg::new("adjacent")
                 .short('a')
                 .long("adjacent")
-                .takes_value(true),
+                .action(ArgAction::Set)
         )
-        .arg(Arg::new("start").short('s').long("start").takes_value(true))
-        .arg(Arg::new("zip").short('z').long("zip").takes_value(false))
-        .arg(Arg::new("chunk").short('c').long("chunk").takes_value(true))
-        .arg(Arg::new("cluster").long("cluster").takes_value(true))
+        .arg(
+            Arg::new("start")
+                .short('s')
+                .long("start")
+                .action(ArgAction::Set)
+        )
+        .arg(
+            Arg::new("zip")
+                .short('z')
+                .long("zip")
+                .action(ArgAction::SetTrue)
+        )
+        .arg(
+            Arg::new("chunk")
+                .short('c')
+                .long("chunk")
+                .value_name("CHUNK")
+                .value_parser(clap::builder::NonEmptyStringValueParser::new())
+                .default_value("32")
+                .required(false)
+        )
+        .arg(
+            Arg::new("cluster")
+                .long("cluster")
+                .action(ArgAction::Set)
+        )
         .arg(
             Arg::new("reporter")
                 .short('r')
                 .long("reporter")
-                .takes_value(true),
+                .action(ArgAction::Set)
         )
-        .arg(Arg::new("TARGET").required(true).last(true))
+        .arg(
+            Arg::new("TARGET")
+                .required(true)
+                .last(true)
+                .index(3)
+        )
         .help_template(
             "\
 -------------------------------------------------------------
@@ -101,46 +136,46 @@ fn run_app() -> Result<(), Error> {
    -v, --version   Prints version information.
 
 -------------------------------------------------------------
-USE OF THIS BINARY FALLS UNDER THE MIT LICENSE  (c) 2017-2018",
+USE OF THIS BINARY FALLS UNDER THE MIT LICENSE  (c) 2017-2023",
         )
         .get_matches();
 
-    if matches.is_present("zip") {
+    if matches.get_flag("zip") {
         validate_unzip_executable()?;
     } else {
         validate_aescrpyt_executable()?;
     }
 
-    let (min, max) = derive_min_max(matches.value_of("RANGE").unwrap())?;
+    let (min, max) = derive_min_max(matches.get_one::<String>("RANGE").unwrap())?;
 
     validate_start_string(&matches, max)?;
 
-    let mapping = derive_character_base(matches.value_of("CHARACTERS").unwrap());
+    let mapping = derive_character_base(matches.get_one::<String>("CHARACTERS").unwrap());
     let resume_key_chars = mapping_to_characters(&mapping);
-    let mut sequencer = Digits::new(mapping, matches.value_of("start").unwrap_or("").to_string());
+    let mut sequencer = Digits::new(mapping, if let Some(seq) = matches.get_one::<String>("start") { seq.to_owned() } else { "".to_string() });
     sequencer.zero_fill(min as usize);
 
-    let target = matches.value_of("TARGET").unwrap_or("");
-    let adjacent = matches.value_of("adjacent");
+    let target = if let Some(tar) = matches.get_one::<String>("TARGET") { tar } else { "" };
+    let adjacent = matches.get_one::<String>("adjacent");
 
     validate_and_prep_sequencer_adjacent(&mut sequencer, adjacent)?;
     validate_file_exists(&target)?;
 
-    let chunk = matches.value_of("chunk");
-    if matches.is_present("chunk") {
+    let chunk = matches.get_one::<String>("chunk").map(|x| x.as_str());
+    if let Some(_) = matches.get_one::<String>("chunk") {
         validate_chunk_input(&chunk.unwrap()[..])?;
     }
 
     let mut cluster_step: Option<usize> = None;
-    if matches.is_present("cluster") {
-        let (offset, step) = derive_cluster(matches.value_of("cluster").unwrap())?;
+    if let Some(_) = matches.get_one::<String>("cluster") {
+        let (offset, step) = derive_cluster(matches.get_one::<String>("cluster").unwrap())?;
         cluster_step = Some(step);
         let additive = sequencer.gen(offset as u64).pred_till_zero();
         sequencer.mut_add(additive);
     }
 
     let reporter =
-        verify_reporter_name(matches.value_of("reporter").unwrap_or("ticker").to_string());
+        verify_reporter_name(if let Some(rep) = matches.get_one::<String>("reporter") { rep } else { "ticker" }.to_string());
 
     // JSON URI
     println!("JSON endpoint available on Port 3838");
@@ -151,7 +186,7 @@ USE OF THIS BINARY FALLS UNDER THE MIT LICENSE  (c) 2017-2018",
     use resume::{ResumeFile, ResumeKey};
     let cli_key = ResumeKey::new(
         resume_key_chars.clone(),
-        adjacent.map(str::to_string),
+        adjacent.map(|x| x.to_string()),
         sequencer,
         target.to_string(),
     );
@@ -167,15 +202,11 @@ USE OF THIS BINARY FALLS UNDER THE MIT LICENSE  (c) 2017-2018",
         cores: num_cpus::get() as u8,
         chunk: chunk.clone().unwrap_or("").parse::<usize>().unwrap_or(32),
         cluster: {
-            if matches.is_present("cluster") {
-                Some(
-                    derive_cluster(matches.value_of("cluster").unwrap())
-                        .ok()
-                        .unwrap(),
-                )
-            } else {
-                None
-            }
+            matches.get_one::<String>("cluster").map(|val|
+                derive_cluster(val)
+                    .ok()
+                    .unwrap()
+            )
         },
         character_set: resume_key_chars.clone(),
         start_time: SystemTime::now(),
@@ -192,8 +223,8 @@ USE OF THIS BINARY FALLS UNDER THE MIT LICENSE  (c) 2017-2018",
         max,
         sequencer,
         target.to_string(),
-        adjacent.map(str::to_string),
-        chunk.map(str::to_string),
+        adjacent.map(|x| x.to_string()),
+        chunk.map(|x| x.to_string()),
         cluster_step,
         reporter_handler,
         reporter,
@@ -202,7 +233,7 @@ USE OF THIS BINARY FALLS UNDER THE MIT LICENSE  (c) 2017-2018",
     let mtchs = matches.clone();
 
     let crypt_runner = thread::spawn(move || {
-        if mtchs.is_present("zip") {
+        if mtchs.get_flag("zip") {
             unzip_core_loop(work_load)
         } else {
             aescrypt_core_loop(work_load)

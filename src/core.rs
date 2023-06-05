@@ -1,4 +1,4 @@
-// Copyright 2017-2018 Daniel P. Clark & other abrute Developers
+// Copyright 2017-2023 Daniel P. Clark & other abrute Developers
 //
 // Licensed under the Apache License, Version 2.0, <LICENSE-APACHE or
 // http://apache.org/licenses/LICENSE-2.0> or the MIT license <LICENSE-MIT or
@@ -135,7 +135,7 @@ pub fn aescrypt_core_loop<'a>(work_load: WorkLoad) -> Result<(), Error> {
 
             if output.status.success() {
                 let mut code_mutex = code.lock().unwrap();
-                code_mutex.push(value.clone().to_string());
+                code_mutex.push(value.to_string());
                 SUCCESS.store(true, Ordering::SeqCst);
                 println!("Success!\nPassword is: {}", value);
             }

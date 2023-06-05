@@ -1,6 +1,6 @@
 [package]
 name = "abrute"
-version = "0.1.9"
+version = "0.1.10"
 authors = ["Daniel P. Clark <6ftdan@gmail.com>"]
 description = "AESCrypt Brute force attempter."
 documentation = "http://danielpclark.github.io/abrute/index.html"
@@ -13,7 +13,7 @@ categories = ["cryptography"]
 
 [dependencies]
 array_tool = "^1.0"
-clap = {version="~3.1.18",features=["cargo"]}
+clap = {version="~4.3.0",features=["cargo"]}
 digits = "~1.1.0"
 lazy_static = "1.4.0"
 libc = "0.2.125"
@@ -21,5 +21,5 @@ num_cpus = "~1.7"
 rayon = "~0.8.2"
 serde = "1.0.24"
 serde_json = "1.0.8"
-tiny_http = "~0.5"
+tiny_http = "~0.8"
 tempdir = "~0.3"
