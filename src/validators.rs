@@ -6,6 +6,7 @@
 // copied, modified, or distributed except according to those terms.
 
 use super::result::Error;
+use aescry::detect;
 use clap;
 use digits::Digits;
 use std::path::Path;
@@ -72,14 +73,13 @@ pub fn validate_file_exists(target: &str) -> Result<(), Error> {
     Ok(())
 }
 
-pub fn validate_aescrpyt_executable() -> Result<(), Error> {
-    if Command::new("aescrypt")
-        .stdout(Stdio::null())
-        .stderr(Stdio::null())
-        .spawn()
-        .is_err()
-    {
-        return Err(Error::AescryptMissing);
+pub fn validate_aescrypt_file(target: &str) -> Result<(), Error> {
+    // Decryption is handled in-process by the `aescry` crate, so there is no
+    // external `aescrypt` executable to look for.  Instead confirm up front
+    // that the target really is an AES Crypt stream, giving a clear error for
+    // anything else before we spend time guessing passwords.
+    if detect::get_file(target).is_none() {
+        return Err(Error::NotAescryptFile);
     }
 
     Ok(())
@@ -96,4 +96,48 @@ pub fn validate_unzip_executable() -> Result<(), Error> {
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    extern crate tempdir;
+    use self::tempdir::TempDir;
+    use super::validate_aescrypt_file;
+    use aescry::aescrypt::{Encryptor, Iterations};
+    use result::Error;
+    use std::fs;
+
+    #[test]
+    fn accepts_a_real_aescrypt_file() {
+        let dir = TempDir::new("abrute-validate-ok").unwrap();
+        let aes_path = dir.path().join("secret.txt.aes");
+        let stream = Encryptor::new("pw")
+            .unwrap()
+            .iterations(Iterations::new(5).unwrap())
+            .encrypt(b"data")
+            .unwrap();
+        fs::write(&aes_path, stream).unwrap();
+
+        assert!(validate_aescrypt_file(aes_path.to_str().unwrap()).is_ok());
+    }
+
+    #[test]
+    fn rejects_a_file_that_is_not_aescrypt() {
+        let dir = TempDir::new("abrute-validate-bad").unwrap();
+        let path = dir.path().join("plain.aes");
+        fs::write(&path, b"this is not an AES Crypt stream").unwrap();
+
+        match validate_aescrypt_file(path.to_str().unwrap()) {
+            Err(Error::NotAescryptFile) => {}
+            other => panic!("expected NotAescryptFile, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn rejects_a_missing_file() {
+        match validate_aescrypt_file("definitely/does/not/exist.aes") {
+            Err(Error::NotAescryptFile) => {}
+            other => panic!("expected NotAescryptFile, got {:?}", other),
+        }
+    }
 }

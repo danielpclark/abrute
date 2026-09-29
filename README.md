@@ -8,12 +8,15 @@ features have been added to this including a **resume feature**, a
 adjacency limitting**, and **custom CLI reporters**. Abrute will decrypt
 the `.aes` and `.zip` extension files on any Linux compatible system.
 
+AES Crypt (`.aes`) decryption is performed in-process by the pure-Rust
+[`aescry`](https://crates.io/crates/aescry) crate, so **no external
+`aescrypt` binary is required**. Only `.zip` decryption still shells out to
+the system `unzip` command.
+
 ## Installation
 
-_abrute needs the nightly build of Rust for the TryFrom trait._
-
 To use the install script you need to have the following commands available on your
-system `curl wget unzip sudo cc` and possibly other build essentials for C.
+system `curl wget unzip sudo cc`.
 
 ---
 
@@ -27,8 +30,8 @@ _NOTE: if you are not root you may need to precede `apt-get` with `sudo`_
 
 ---
 
-The `install.sh` script will check for Rust and aescrypt and proceed to install them
-if they are missing _(it will ask you if you want to install Rust)_.
+The `install.sh` script will check for Rust and proceed to install it
+if it is missing _(it will ask you if you want to install Rust)_.
 
 First download the installation script locally.
 
@@ -47,20 +50,10 @@ command `abrute` available to you everywhere.
 
 ### Manual Installation
 
-First you need to have aescrypt installed.
+You need to have [Rust installed](https://www.rust-lang.org/en-US/install.html).
 
 ```bash
-wget https://www.aescrypt.com/download/v3/linux/aescrypt-3.13.tgz
-tar -xzf aescrypt-3.13.tgz
-cd aescrypt-3.13/src
-make && sudo make install
-cd ../.. && rm -rf aescrypt-3.13
-```
-
-Next you need to have [Rust installed](https://www.rust-lang.org/en-US/install.html).  
-
-```bash
-curl https://sh.rustup.rs -sSf | sh -s -- --channel=nightly
+curl https://sh.rustup.rs -sSf | sh
 ```
 
 Then you can get and compile abrute.
@@ -68,7 +61,7 @@ Then you can get and compile abrute.
 ```bash
 git clone https://github.com/danielpclark/abrute.git
 cd abrute
-cargo +nightly build --release
+cargo build --release
 sudo cp target/release/abrute /usr/bin/
 ```
 
@@ -85,7 +78,7 @@ sudo cp target/release/abrute /usr/bin/
                    not allow any characters of the same kind to neighbor
                    in the attempts.
    -s, --start     Starting character sequence to begin with.
-   -z, --zip       Use `unzip` decryption instead of `aescrypt`.
+   -z, --zip       Use `unzip` decryption instead of AES Crypt.
    -c, --chunk     Workload chunk size per core before status update.
                    Defaults to 32.
    --cluster       Takes an offset and cluster size such as 1:4 for the
