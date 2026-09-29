@@ -5,7 +5,7 @@
 describe "* abrute decrypts with one adjacent sequences"
   it "1) prep encrypted file"
     echo "Hello World!" > test/data/example.file
-    bin/aescrypt -e -p 4321 test/data/example.file
+    cargo run -q --example aescrypt_encrypt -- 4321 test/data/example.file test/data/example.file.aes 5
     assert file_present test/data/example.file.aes
   end
 

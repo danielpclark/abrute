@@ -5,12 +5,13 @@
 // http://opensource.org/licenses/MIT>, at your option. This file may not be
 // copied, modified, or distributed except according to those terms.
 
+use aescry;
 use std::error::Error as StdError;
 use std::fmt;
 
 #[derive(Debug)]
 pub enum Error {
-    AescryptMissing,
+    DecryptionFailed,
     FailedTempDir,
     FileMissing,
     InvalidAdjacentNumber,
@@ -18,15 +19,22 @@ pub enum Error {
     InvalidChunkNumber,
     InvalidRange,
     InvalidStringLength,
+    NotAescryptFile,
     PasswordNotFound,
     MalformedResumeKey,
     UnzipMissing,
 }
 
+impl From<aescry::Error> for Error {
+    fn from(_: aescry::Error) -> Self {
+        Error::DecryptionFailed
+    }
+}
+
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
-            Error::AescryptMissing => f.write_str("AescryptMissing"),
+            Error::DecryptionFailed => f.write_str("DecryptionFailed"),
             Error::FailedTempDir => f.write_str("FailedTempDir"),
             Error::FileMissing => f.write_str("FileMissing"),
             Error::InvalidAdjacentNumber => f.write_str("InvalidAdjacentNumber"),
@@ -34,6 +42,7 @@ impl fmt::Display for Error {
             Error::InvalidChunkNumber => f.write_str("InvalidChunkNumber"),
             Error::InvalidRange => f.write_str("InvalidRange"),
             Error::InvalidStringLength => f.write_str("InvalidStringLength"),
+            Error::NotAescryptFile => f.write_str("NotAescryptFile"),
             Error::PasswordNotFound => f.write_str("PasswordNotFound"),
             Error::MalformedResumeKey => f.write_str("MalformedResumeKey"),
             Error::UnzipMissing => f.write_str("UnzipMissing"),
@@ -42,8 +51,13 @@ impl fmt::Display for Error {
 }
 
 #[inline]
-fn aescrypt_missing() -> &'static str {
-    "aescrypt does not appear to be installed."
+fn decryption_failed() -> &'static str {
+    "The password was found but decrypting the target file failed."
+}
+
+#[inline]
+fn not_aescrypt_file() -> &'static str {
+    "The target file does not appear to be an AES Crypt (.aes) file."
 }
 
 #[inline]
@@ -99,7 +113,7 @@ fn unzip_missing() -> &'static str {
 impl StdError for Error {
     fn description(&self) -> &str {
         match *self {
-            Error::AescryptMissing => aescrypt_missing(),
+            Error::DecryptionFailed => decryption_failed(),
             Error::FailedTempDir => failed_temp_dir(),
             Error::FileMissing => file_missing(),
             Error::InvalidAdjacentNumber => invalid_adjacent_number(),
@@ -107,6 +121,7 @@ impl StdError for Error {
             Error::InvalidChunkNumber => invalid_chunk_number(),
             Error::InvalidRange => invalid_range(),
             Error::InvalidStringLength => invalid_string_length(),
+            Error::NotAescryptFile => not_aescrypt_file(),
             Error::PasswordNotFound => password_not_found(),
             Error::MalformedResumeKey => malformed_resume_key(),
             Error::UnzipMissing => unzip_missing(),

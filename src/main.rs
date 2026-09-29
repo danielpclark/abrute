@@ -5,7 +5,7 @@
 // http://opensource.org/licenses/MIT>, at your option. This file may not be
 // copied, modified, or distributed except according to those terms.
 
-#![feature(libc)]
+extern crate aescry;
 extern crate digits;
 extern crate rayon;
 use digits::Digits;
@@ -122,7 +122,7 @@ fn run_app() -> Result<(), Error> {
                    not allow any characters of the same kind to neighbor
                    in the attempts.
    -s, --start     Starting character sequence to begin with.
-   -z, --zip       Use `unzip` decryption instead of `aescrypt`.
+   -z, --zip       Use `unzip` decryption instead of AES Crypt.
    -c, --chunk     Workload chunk size per core before status update.
                    Defaults to 32.
    --cluster       Takes an offset and cluster size such as 1:4 for the
@@ -142,8 +142,6 @@ USE OF THIS BINARY FALLS UNDER THE MIT LICENSE  (c) 2017-2023",
 
     if matches.get_flag("zip") {
         validate_unzip_executable()?;
-    } else {
-        validate_aescrpyt_executable()?;
     }
 
     let (min, max) = derive_min_max(matches.get_one::<String>("RANGE").unwrap())?;
@@ -160,6 +158,9 @@ USE OF THIS BINARY FALLS UNDER THE MIT LICENSE  (c) 2017-2023",
 
     validate_and_prep_sequencer_adjacent(&mut sequencer, adjacent)?;
     validate_file_exists(&target)?;
+    if !matches.get_flag("zip") {
+        validate_aescrypt_file(&target)?;
+    }
 
     let chunk = matches.get_one::<String>("chunk").map(|x| x.as_str());
     if let Some(_) = matches.get_one::<String>("chunk") {

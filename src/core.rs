@@ -6,6 +6,8 @@
 // copied, modified, or distributed except according to those terms.
 
 use super::result::Error;
+use aescry::aescrypt::Decryptor;
+use aescry::security::{self, DecryptKey};
 use digits::Digits;
 use model::cli_reporter::CliReporter;
 use model::work_load::WorkLoad;
@@ -65,14 +67,47 @@ fn chunk_sequence(
     result
 }
 
-fn aes_command(value: &str, target: &str) -> Output {
-    Command::new("aescrypt")
-        .arg("-d")
-        .arg("-p")
-        .arg(value)
-        .arg(target)
-        .output()
-        .unwrap()
+/// Return `true` when `password` correctly opens the AES Crypt stream in
+/// `data`.
+///
+/// This uses `aescry`'s `security::verify`, which runs the same key
+/// derivation and HMAC checks a real decryption would, but throws the
+/// plaintext away instead of allocating it.  That keeps every wrong guess as
+/// cheap as possible while still only reporting success when the password can
+/// actually produce the original file.  A wrong password is reported as a
+/// mismatch (not an error); genuine errors (a corrupt or non-AES-Crypt
+/// stream) simply count as "no match" so the search can continue.
+fn password_matches(password: &str, data: &[u8]) -> bool {
+    match DecryptKey::password(password) {
+        Ok(key) => security::verify(&key, data)
+            .map(|verification| verification.is_authentic())
+            .unwrap_or(false),
+        Err(_) => false,
+    }
+}
+
+/// Where the decrypted plaintext should be written for a given target.
+///
+/// Mirrors the behaviour of the `aescrypt` CLI: a `foo.txt.aes` target
+/// decrypts to `foo.txt` alongside it.  A target without the `.aes`
+/// extension gets a `.decrypted` suffix so we never overwrite the ciphertext.
+fn output_path_for(target: &str) -> path::PathBuf {
+    let path = path::Path::new(target);
+    if path.extension().and_then(|ext| ext.to_str()) == Some("aes") {
+        path.with_extension("")
+    } else {
+        let mut name = target.to_string();
+        name.push_str(".decrypted");
+        path::PathBuf::from(name)
+    }
+}
+
+/// Decrypt `target` with the discovered `password`, writing the plaintext to
+/// disk and returning the path it was written to.
+fn decrypt_to_file(password: &str, target: &str) -> Result<path::PathBuf, Error> {
+    let output = output_path_for(target);
+    Decryptor::new(password)?.decrypt_file(target, &output)?;
+    Ok(output)
 }
 
 fn unzip_command(value: &str, target: &str) -> Output {
@@ -112,6 +147,11 @@ pub fn aescrypt_core_loop<'a>(work_load: WorkLoad) -> Result<(), Error> {
         reporter_handler,
         cli_reporter,
     ) = work_load;
+
+    // The encrypted file never changes while we search, so read it into memory
+    // once and verify every guess against those bytes in-process with `aescry`.
+    let data = fs::read(&target).map_err(|_| Error::FileMissing)?;
+
     let mut time_keeper = Instant::now();
     let mut five_minute_iterations: usize = 0;
     loop {
@@ -129,11 +169,11 @@ pub fn aescrypt_core_loop<'a>(work_load: WorkLoad) -> Result<(), Error> {
         let code: Mutex<Vec<String>> = Mutex::new(vec![]);
 
         chunk.par_iter().for_each(|ref value| {
-            let output = aes_command(&value, &target);
+            let matched = password_matches(value, &data);
 
             ITERATIONS.fetch_add(1, Ordering::SeqCst);
 
-            if output.status.success() {
+            if matched {
                 let mut code_mutex = code.lock().unwrap();
                 code_mutex.push(value.to_string());
                 SUCCESS.store(true, Ordering::SeqCst);
@@ -143,13 +183,10 @@ pub fn aescrypt_core_loop<'a>(work_load: WorkLoad) -> Result<(), Error> {
 
         let code = code.lock().unwrap();
         if !code.is_empty() {
-            // Other attempts will erase the output file as there is always an empty file
-            // created in place when trying to decrypt. So we need to take the correct
-            // answer and decrypt the source one last time.  Otherwise we'd need to isolate
-            // every attempt in a temp dir or mem dir and copying that much data that many
-            // times would be very slow and difficult to implement in a threaded way.
-
-            aes_command(code.first().unwrap(), &target[..]);
+            // The guessing loop only verifies the password (no plaintext is
+            // produced), so now that we have the answer, decrypt the source
+            // file once to write the recovered plaintext to disk.
+            decrypt_to_file(code.first().unwrap(), &target)?;
             ResumeFile::purge();
             break;
         }
@@ -289,5 +326,84 @@ pub fn unzip_core_loop<'a>(work_load: WorkLoad) -> Result<(), Error> {
         }
     } else {
         return Err(Error::FailedTempDir);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    extern crate tempdir;
+    use self::tempdir::TempDir;
+    use super::{decrypt_to_file, output_path_for, password_matches};
+    use aescry::aescrypt::{Encryptor, Iterations};
+    use std::fs;
+    use std::path;
+
+    // A small iteration count keeps these tests fast; the value the file was
+    // written with is read back from its header at verification time.
+    fn encrypt(password: &str, plaintext: &[u8]) -> Vec<u8> {
+        Encryptor::new(password)
+            .unwrap()
+            .iterations(Iterations::new(5).unwrap())
+            .encrypt(plaintext)
+            .unwrap()
+    }
+
+    #[test]
+    fn password_matches_accepts_the_correct_password() {
+        let data = encrypt("swordfish", b"top secret");
+        assert!(password_matches("swordfish", &data));
+    }
+
+    #[test]
+    fn password_matches_rejects_a_wrong_password() {
+        let data = encrypt("swordfish", b"top secret");
+        assert!(!password_matches("clownfish", &data));
+    }
+
+    #[test]
+    fn password_matches_rejects_non_aescrypt_bytes() {
+        assert!(!password_matches("swordfish", b"plainly not an AES Crypt stream"));
+    }
+
+    #[test]
+    fn output_path_for_strips_the_aes_extension() {
+        assert_eq!(
+            output_path_for("secret.txt.aes"),
+            path::PathBuf::from("secret.txt")
+        );
+        assert_eq!(
+            output_path_for("some/dir/secret.txt.aes"),
+            path::PathBuf::from("some/dir/secret.txt")
+        );
+    }
+
+    #[test]
+    fn output_path_for_appends_when_not_aes() {
+        assert_eq!(
+            output_path_for("payload.bin"),
+            path::PathBuf::from("payload.bin.decrypted")
+        );
+    }
+
+    #[test]
+    fn decrypt_to_file_writes_the_recovered_plaintext() {
+        let dir = TempDir::new("abrute-core-decrypt").unwrap();
+        let aes_path = dir.path().join("message.txt.aes");
+        let plaintext = b"Hello World!\n";
+        fs::write(&aes_path, encrypt("4321", plaintext)).unwrap();
+
+        let output = decrypt_to_file("4321", aes_path.to_str().unwrap()).unwrap();
+
+        assert_eq!(output, dir.path().join("message.txt"));
+        assert_eq!(fs::read(&output).unwrap(), plaintext);
+    }
+
+    #[test]
+    fn decrypt_to_file_fails_with_a_wrong_password() {
+        let dir = TempDir::new("abrute-core-decrypt-fail").unwrap();
+        let aes_path = dir.path().join("message.txt.aes");
+        fs::write(&aes_path, encrypt("4321", b"secret")).unwrap();
+
+        assert!(decrypt_to_file("0000", aes_path.to_str().unwrap()).is_err());
     }
 }
