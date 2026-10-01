@@ -6,23 +6,21 @@
 // copied, modified, or distributed except according to those terms.
 
 use super::result::Error;
+use crate::model::cli_reporter::CliReporter;
+use crate::model::work_load::WorkLoad;
+use crate::resume::{ResumeFile, ResumeKey};
+use crate::{ITERATIONS, SUCCESS};
 use aescry::aescrypt::Decryptor;
 use aescry::security::{self, DecryptKey};
 use digits::Digits;
-use model::cli_reporter::CliReporter;
-use model::work_load::WorkLoad;
 use rayon::prelude::*;
 use std::io::Read;
 use std::process::{Command, Output};
-extern crate num_cpus;
-extern crate tempfile;
-use self::tempfile::{Builder, TempDir};
-use resume::{ResumeFile, ResumeKey};
 use std::sync::atomic::Ordering;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 use std::{env, fs, path};
-use {ITERATIONS, SUCCESS};
+use tempfile::{Builder, TempDir};
 
 fn has_five_minutes_passed(t: Instant) -> bool {
     Instant::now().duration_since(t) > Duration::new(300, 0)
@@ -331,12 +329,11 @@ pub fn unzip_core_loop<'a>(work_load: WorkLoad) -> Result<(), Error> {
 
 #[cfg(test)]
 mod tests {
-    extern crate tempfile;
-    use self::tempfile::TempDir;
     use super::{decrypt_to_file, output_path_for, password_matches};
     use aescry::aescrypt::{Encryptor, Iterations};
     use std::fs;
     use std::path;
+    use tempfile::TempDir;
 
     // A small iteration count keeps these tests fast; the value the file was
     // written with is read back from its header at verification time.

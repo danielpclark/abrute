@@ -5,40 +5,29 @@
 // http://opensource.org/licenses/MIT>, at your option. This file may not be
 // copied, modified, or distributed except according to those terms.
 
-extern crate aescry;
-extern crate digits;
-extern crate rayon;
 use digits::Digits;
 mod model;
 mod web;
-use model::report_data::ReportData;
-use model::work_load::WorkLoad;
+use crate::model::report_data::ReportData;
+use crate::model::work_load::WorkLoad;
 mod process_input;
 mod reporter;
 mod result;
 mod resume;
-use process_input::*;
+use crate::process_input::*;
 mod validators;
-use validators::*;
+use crate::validators::*;
 mod core;
-use core::*;
-use result::Error;
+use crate::core::*;
+use crate::result::Error;
+use clap::{crate_authors, crate_version, Arg, ArgAction, Command};
 use std::io::{self, Write};
-#[macro_use]
-extern crate clap;
-use clap::{Arg, ArgAction, Command};
-extern crate serde_json;
 use std::sync::{Arc, Mutex};
 use std::time::SystemTime;
-extern crate num_cpus;
-extern crate tiny_http;
-#[macro_use]
-extern crate lazy_static;
 
-use std::thread;
-extern crate libc;
 use libc::pthread_cancel;
 use std::os::unix::thread::{JoinHandleExt, RawPthread};
+use std::thread;
 
 use std::sync::atomic::{AtomicBool, AtomicUsize};
 
@@ -184,7 +173,7 @@ USE OF THIS BINARY FALLS UNDER THE MIT LICENSE  (c) 2017-2023",
 
     // Begin Resume Feature
     let starting = sequencer.to_s();
-    use resume::{ResumeFile, ResumeKey};
+    use crate::resume::{ResumeFile, ResumeKey};
     let cli_key = ResumeKey::new(
         resume_key_chars.clone(),
         adjacent.map(|x| x.to_string()),

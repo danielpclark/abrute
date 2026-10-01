@@ -5,13 +5,15 @@
 // http://opensource.org/licenses/MIT>, at your option. This file may not be
 // copied, modified, or distributed except according to those terms.
 
+use crate::{Digits, ITERATIONS};
 use std::collections::HashMap;
 use std::io;
 use std::io::Write;
 use std::sync::atomic::Ordering;
 use std::sync::Mutex;
 use std::time::Instant;
-use {Digits, ITERATIONS};
+
+use lazy_static::lazy_static;
 
 lazy_static! {
   // len => Iterations, Iteration Start, Start Instant (for Duration)

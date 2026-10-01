@@ -5,7 +5,7 @@
 // http://opensource.org/licenses/MIT>, at your option. This file may not be
 // copied, modified, or distributed except according to those terms.
 
-use Digits;
+use crate::Digits;
 
 pub enum CliReporter {
     TickerTape,
@@ -17,9 +17,9 @@ impl CliReporter {
     #[inline]
     pub fn report(&self, data: &Digits) {
         match *self {
-            ref _thingy @ CliReporter::TickerTape => ::reporter::ticker_tape::report(data),
-            ref _thingy @ CliReporter::Spinner => ::reporter::spinner::report(data),
-            ref _thingy @ CliReporter::Benchmark => ::reporter::benchmark::report(data),
+            ref _thingy @ CliReporter::TickerTape => crate::reporter::ticker_tape::report(data),
+            ref _thingy @ CliReporter::Spinner => crate::reporter::spinner::report(data),
+            ref _thingy @ CliReporter::Benchmark => crate::reporter::benchmark::report(data),
         }
     }
 }

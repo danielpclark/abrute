@@ -6,8 +6,8 @@
 // copied, modified, or distributed except according to those terms.
 
 use super::result::Error;
+use crate::model::cli_reporter::CliReporter;
 use digits::BaseCustom;
-use model::cli_reporter::CliReporter;
 
 pub fn verify_reporter_name(rn: String) -> CliReporter {
     match &rn[..] {

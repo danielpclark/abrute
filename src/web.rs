@@ -5,10 +5,8 @@
 // http://opensource.org/licenses/MIT>, at your option. This file may not be
 // copied, modified, or distributed except according to those terms.
 
+use crate::model::report_data::*;
 use tiny_http::{Response, Server};
-extern crate serde;
-extern crate serde_json;
-use model::report_data::*;
 
 pub fn host_data(web_reporter: &ReportData) {
     let server = Server::http("0.0.0.0:3838").unwrap();
