@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.org/danielpclark/abrute.svg?branch=master)](https://travis-ci.org/danielpclark/abrute)
+[![CI](https://github.com/danielpclark/abrute/actions/workflows/ci.yml/badge.svg)](https://github.com/danielpclark/abrute/actions/workflows/ci.yml)
 
 # abrute - Multi-threaded AES Brute Force File Decryption
 

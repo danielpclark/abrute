@@ -15,8 +15,8 @@ use rayon::prelude::*;
 use std::io::Read;
 use std::process::{Command, Output};
 extern crate num_cpus;
-extern crate tempdir;
-use self::tempdir::TempDir;
+extern crate tempfile;
+use self::tempfile::{Builder, TempDir};
 use resume::{ResumeFile, ResumeKey};
 use std::sync::atomic::Ordering;
 use std::sync::{Arc, Mutex};
@@ -251,7 +251,7 @@ pub fn unzip_core_loop<'a>(work_load: WorkLoad) -> Result<(), Error> {
     ) = work_load;
     let mut time_keeper = Instant::now();
     let mut five_minute_iterations: usize = 0;
-    if let Ok(dir) = TempDir::new("abrute") {
+    if let Ok(dir) = Builder::new().prefix("abrute").tempdir() {
         let cwd = env::current_dir().unwrap();
         let working = path::Path::new(&dir.path().as_os_str()).join(&target);
         fs::copy(&target, &working).unwrap();
@@ -331,8 +331,8 @@ pub fn unzip_core_loop<'a>(work_load: WorkLoad) -> Result<(), Error> {
 
 #[cfg(test)]
 mod tests {
-    extern crate tempdir;
-    use self::tempdir::TempDir;
+    extern crate tempfile;
+    use self::tempfile::TempDir;
     use super::{decrypt_to_file, output_path_for, password_matches};
     use aescry::aescrypt::{Encryptor, Iterations};
     use std::fs;
@@ -362,7 +362,10 @@ mod tests {
 
     #[test]
     fn password_matches_rejects_non_aescrypt_bytes() {
-        assert!(!password_matches("swordfish", b"plainly not an AES Crypt stream"));
+        assert!(!password_matches(
+            "swordfish",
+            b"plainly not an AES Crypt stream"
+        ));
     }
 
     #[test]
@@ -387,7 +390,7 @@ mod tests {
 
     #[test]
     fn decrypt_to_file_writes_the_recovered_plaintext() {
-        let dir = TempDir::new("abrute-core-decrypt").unwrap();
+        let dir = TempDir::new().unwrap();
         let aes_path = dir.path().join("message.txt.aes");
         let plaintext = b"Hello World!\n";
         fs::write(&aes_path, encrypt("4321", plaintext)).unwrap();
@@ -400,7 +403,7 @@ mod tests {
 
     #[test]
     fn decrypt_to_file_fails_with_a_wrong_password() {
-        let dir = TempDir::new("abrute-core-decrypt-fail").unwrap();
+        let dir = TempDir::new().unwrap();
         let aes_path = dir.path().join("message.txt.aes");
         fs::write(&aes_path, encrypt("4321", b"secret")).unwrap();
 

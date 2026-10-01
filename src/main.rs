@@ -50,33 +50,25 @@ fn run_app() -> Result<(), Error> {
         .version(crate_version!())
         .author(crate_authors!("\n"))
         .override_usage("abrute <RANGE> <CHARACTERS> [OPTIONS] -- <TARGET>")
-        .arg(
-            Arg::new("RANGE")
-                .required(true)
-                .index(1)
-        )
-        .arg(
-            Arg::new("CHARACTERS")
-                .required(true)
-                .index(2)
-        )
+        .arg(Arg::new("RANGE").required(true).index(1))
+        .arg(Arg::new("CHARACTERS").required(true).index(2))
         .arg(
             Arg::new("adjacent")
                 .short('a')
                 .long("adjacent")
-                .action(ArgAction::Set)
+                .action(ArgAction::Set),
         )
         .arg(
             Arg::new("start")
                 .short('s')
                 .long("start")
-                .action(ArgAction::Set)
+                .action(ArgAction::Set),
         )
         .arg(
             Arg::new("zip")
                 .short('z')
                 .long("zip")
-                .action(ArgAction::SetTrue)
+                .action(ArgAction::SetTrue),
         )
         .arg(
             Arg::new("chunk")
@@ -85,25 +77,16 @@ fn run_app() -> Result<(), Error> {
                 .value_name("CHUNK")
                 .value_parser(clap::builder::NonEmptyStringValueParser::new())
                 .default_value("32")
-                .required(false)
+                .required(false),
         )
-        .arg(
-            Arg::new("cluster")
-                .long("cluster")
-                .action(ArgAction::Set)
-        )
+        .arg(Arg::new("cluster").long("cluster").action(ArgAction::Set))
         .arg(
             Arg::new("reporter")
                 .short('r')
                 .long("reporter")
-                .action(ArgAction::Set)
+                .action(ArgAction::Set),
         )
-        .arg(
-            Arg::new("TARGET")
-                .required(true)
-                .last(true)
-                .index(3)
-        )
+        .arg(Arg::new("TARGET").required(true).last(true).index(3))
         .help_template(
             "\
 -------------------------------------------------------------
@@ -150,10 +133,21 @@ USE OF THIS BINARY FALLS UNDER THE MIT LICENSE  (c) 2017-2023",
 
     let mapping = derive_character_base(matches.get_one::<String>("CHARACTERS").unwrap());
     let resume_key_chars = mapping_to_characters(&mapping);
-    let mut sequencer = Digits::new(mapping, if let Some(seq) = matches.get_one::<String>("start") { seq.to_owned() } else { "".to_string() });
+    let mut sequencer = Digits::new(
+        mapping,
+        if let Some(seq) = matches.get_one::<String>("start") {
+            seq.to_owned()
+        } else {
+            "".to_string()
+        },
+    );
     sequencer.zero_fill(min as usize);
 
-    let target = if let Some(tar) = matches.get_one::<String>("TARGET") { tar } else { "" };
+    let target = if let Some(tar) = matches.get_one::<String>("TARGET") {
+        tar
+    } else {
+        ""
+    };
     let adjacent = matches.get_one::<String>("adjacent");
 
     validate_and_prep_sequencer_adjacent(&mut sequencer, adjacent)?;
@@ -175,8 +169,14 @@ USE OF THIS BINARY FALLS UNDER THE MIT LICENSE  (c) 2017-2023",
         sequencer.mut_add(additive);
     }
 
-    let reporter =
-        verify_reporter_name(if let Some(rep) = matches.get_one::<String>("reporter") { rep } else { "ticker" }.to_string());
+    let reporter = verify_reporter_name(
+        if let Some(rep) = matches.get_one::<String>("reporter") {
+            rep
+        } else {
+            "ticker"
+        }
+        .to_string(),
+    );
 
     // JSON URI
     println!("JSON endpoint available on Port 3838");
@@ -203,11 +203,9 @@ USE OF THIS BINARY FALLS UNDER THE MIT LICENSE  (c) 2017-2023",
         cores: num_cpus::get() as u8,
         chunk: chunk.clone().unwrap_or("").parse::<usize>().unwrap_or(32),
         cluster: {
-            matches.get_one::<String>("cluster").map(|val|
-                derive_cluster(val)
-                    .ok()
-                    .unwrap()
-            )
+            matches
+                .get_one::<String>("cluster")
+                .map(|val| derive_cluster(val).ok().unwrap())
         },
         character_set: resume_key_chars.clone(),
         start_time: SystemTime::now(),
