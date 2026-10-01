@@ -32,7 +32,11 @@ pub fn validate_start_string(matches: &clap::ArgMatches, max: usize) -> Result<(
             return Err(Error::InvalidStringLength);
         }
 
-        let chrctrs: Vec<char> = matches.get_one::<String>("CHARACTERS").unwrap().chars().collect();
+        let chrctrs: Vec<char> = matches
+            .get_one::<String>("CHARACTERS")
+            .unwrap()
+            .chars()
+            .collect();
         let mut itr = s.chars();
         loop {
             match itr.next() {
@@ -100,8 +104,8 @@ pub fn validate_unzip_executable() -> Result<(), Error> {
 
 #[cfg(test)]
 mod tests {
-    extern crate tempdir;
-    use self::tempdir::TempDir;
+    extern crate tempfile;
+    use self::tempfile::TempDir;
     use super::validate_aescrypt_file;
     use aescry::aescrypt::{Encryptor, Iterations};
     use result::Error;
@@ -109,7 +113,7 @@ mod tests {
 
     #[test]
     fn accepts_a_real_aescrypt_file() {
-        let dir = TempDir::new("abrute-validate-ok").unwrap();
+        let dir = TempDir::new().unwrap();
         let aes_path = dir.path().join("secret.txt.aes");
         let stream = Encryptor::new("pw")
             .unwrap()
@@ -123,7 +127,7 @@ mod tests {
 
     #[test]
     fn rejects_a_file_that_is_not_aescrypt() {
-        let dir = TempDir::new("abrute-validate-bad").unwrap();
+        let dir = TempDir::new().unwrap();
         let path = dir.path().join("plain.aes");
         fs::write(&path, b"this is not an AES Crypt stream").unwrap();
 

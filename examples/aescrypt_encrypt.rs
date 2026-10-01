@@ -31,7 +31,9 @@ fn main() {
     if args.len() < 4 || args.len() > 5 {
         eprintln!(
             "Usage: {} <password> <input> <output.aes> [iterations]",
-            args.get(0).map(|s| s.as_str()).unwrap_or("aescrypt_encrypt")
+            args.get(0)
+                .map(|s| s.as_str())
+                .unwrap_or("aescrypt_encrypt")
         );
         process::exit(2);
     }

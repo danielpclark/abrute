@@ -1,7 +1,0 @@
-language: rust
-os:
-- linux
-rust:
-- stable
-- nightly
-script: cargo test && cargo build && shpec test/*.test

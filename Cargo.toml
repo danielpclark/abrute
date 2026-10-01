@@ -14,14 +14,14 @@ categories = ["cryptography"]
 
 [dependencies]
 aescry = "1.0"
-array_tool = "^1.0"
-clap = {version="~4.3.0",features=["cargo"]}
-digits = "~1.1.0"
-lazy_static = "1.4.0"
+array_tool = "1.0"
+clap = { version = "4.3", features = ["cargo"] }
+digits = "1.1"
+lazy_static = "1.4"
 libc = "0.2.125"
-num_cpus = "~1.7"
-rayon = "~0.8.2"
-serde = "1.0.24"
-serde_json = "1.0.8"
-tiny_http = "~0.8"
-tempdir = "~0.3"
+num_cpus = "1.16"
+rayon = "1.10"
+serde = "1.0"
+serde_json = "1.0"
+tiny_http = "0.12"
+tempfile = "3.8"
