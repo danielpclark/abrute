@@ -21,8 +21,6 @@
 //! small value so that brute-forcing the fixture stays fast even in an
 //! unoptimized debug build.
 
-extern crate aescry;
-
 use aescry::aescrypt::{Encryptor, Iterations};
 use std::process;
 

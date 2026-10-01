@@ -104,12 +104,11 @@ pub fn validate_unzip_executable() -> Result<(), Error> {
 
 #[cfg(test)]
 mod tests {
-    extern crate tempfile;
-    use self::tempfile::TempDir;
     use super::validate_aescrypt_file;
+    use crate::result::Error;
     use aescry::aescrypt::{Encryptor, Iterations};
-    use result::Error;
     use std::fs;
+    use tempfile::TempDir;
 
     #[test]
     fn accepts_a_real_aescrypt_file() {

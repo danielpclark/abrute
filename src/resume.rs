@@ -5,7 +5,9 @@
 // http://opensource.org/licenses/MIT>, at your option. This file may not be
 // copied, modified, or distributed except according to those terms.
 
-use result::Error::MalformedResumeKey;
+use crate::result::Error::MalformedResumeKey;
+use array_tool::vec::Shift;
+use digits::prelude::*;
 use std::convert::TryFrom;
 use std::fmt;
 use std::fmt::Display;
@@ -13,10 +15,6 @@ use std::fs;
 use std::fs::{File, OpenOptions};
 use std::io::{BufReader, Read, Write};
 use std::path::Path;
-extern crate array_tool;
-use self::array_tool::vec::Shift;
-extern crate digits;
-use self::digits::prelude::*;
 
 #[derive(Clone)]
 pub(crate) struct ResumeKeyDB {
@@ -163,7 +161,7 @@ fn can_pick_latest_resume_value() {
 }
 
 impl TryFrom<String> for ResumeKey {
-    type Error = ::result::Error;
+    type Error = crate::result::Error;
     fn try_from(s: String) -> Result<ResumeKey, Self::Error> {
         let mut values: Vec<String> = s
             .split("\n")

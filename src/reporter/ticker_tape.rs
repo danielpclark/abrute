@@ -5,8 +5,8 @@
 // http://opensource.org/licenses/MIT>, at your option. This file may not be
 // copied, modified, or distributed except according to those terms.
 
+use crate::Digits;
 use std::io::{self, Write};
-use Digits;
 
 pub fn report(data: &Digits) {
     print!("{}..", data.to_s());

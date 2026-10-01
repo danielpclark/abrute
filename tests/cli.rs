@@ -14,8 +14,6 @@
 //! time.  Each scenario runs in its own temp directory so the resume file and
 //! decrypted output never leak between cases.
 
-extern crate aescry;
-
 use aescry::aescrypt::{Encryptor, Iterations};
 use std::fs;
 use std::path::{Path, PathBuf};

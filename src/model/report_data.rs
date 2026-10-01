@@ -5,13 +5,12 @@
 // http://opensource.org/licenses/MIT>, at your option. This file may not be
 // copied, modified, or distributed except according to those terms.
 
-use std::time::SystemTime;
-extern crate serde;
-use self::serde::ser::{Serialize, SerializeStruct, Serializer};
+use crate::{ITERATIONS, SUCCESS};
+use serde::ser::{Serialize, SerializeStruct, Serializer};
 use std::ops::Deref;
 use std::sync::atomic::Ordering;
 use std::sync::{Arc, Mutex};
-use {ITERATIONS, SUCCESS};
+use std::time::SystemTime;
 
 #[derive(Clone)]
 pub struct ReportData {
